@@ -1,0 +1,9 @@
+#pragma once
+
+#define IDI_APP_ICON 101
+
+#define IDS_APP_NAME 201
+#define IDS_TRAY_ENABLED 202
+#define IDS_TRAY_START_WITH_WINDOWS 203
+#define IDS_TRAY_SETTINGS 204
+#define IDS_TRAY_EXIT 205

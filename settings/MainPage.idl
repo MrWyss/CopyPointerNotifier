@@ -1,0 +1,8 @@
+namespace CopyPointerNotifier_Settings
+{
+    [default_interface]
+    runtimeclass MainPage : Microsoft.UI.Xaml.Controls.Page
+    {
+        MainPage();
+    }
+}

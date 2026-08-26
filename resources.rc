@@ -1,0 +1,16 @@
+#include <windows.h>
+#include "resource.h"
+
+1 RT_MANIFEST "app.manifest"
+IDI_APP_ICON ICON "assets\\AppIcon.ico"
+
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+
+STRINGTABLE
+BEGIN
+    IDS_APP_NAME "Copy Pointer Notifier"
+    IDS_TRAY_ENABLED "Enabled"
+    IDS_TRAY_START_WITH_WINDOWS "Start with Windows"
+    IDS_TRAY_SETTINGS "Settings..."
+    IDS_TRAY_EXIT "Exit"
+END

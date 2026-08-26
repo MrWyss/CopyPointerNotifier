@@ -1,0 +1,398 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Page
+    x:Class="CopyPointerNotifier_Settings.MainPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Loaded="Page_Loaded">
+
+    <ScrollViewer
+        VerticalScrollBarVisibility="Auto"
+        VerticalScrollMode="Auto"
+        HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Padding="24,12,24,28" Spacing="14">
+            <StackPanel Spacing="8">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock
+                    x:Uid="PositionHeader"
+                    FontSize="16"
+                    FontWeight="SemiBold"
+                    Text="Position" />
+                <TextBlock
+                    x:Name="PositionValueText"
+                    Grid.Column="1"
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                    VerticalAlignment="Center" />
+            </Grid>
+            <Border
+                HorizontalAlignment="Center"
+                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                BorderThickness="1"
+                CornerRadius="12"
+                Padding="10">
+                <Grid
+                    x:Name="PositionPad"
+                    Width="220"
+                    Height="220"
+                    Background="Transparent"
+                    PointerMoved="PositionPad_PointerMoved"
+                    PointerPressed="PositionPad_PointerPressed"
+                    PointerReleased="PositionPad_PointerReleased"
+                    SizeChanged="PositionPad_SizeChanged">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <Border
+                        Grid.RowSpan="2"
+                        Grid.ColumnSpan="2"
+                        BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
+                        BorderThickness="1" />
+                    <Border
+                        Grid.RowSpan="2"
+                        Grid.Column="1"
+                        BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
+                        BorderThickness="1,0,0,0" />
+                    <Border
+                        Grid.Row="1"
+                        Grid.ColumnSpan="2"
+                        BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
+                        BorderThickness="0,1,0,0" />
+
+                    <Canvas
+                        x:Name="PositionCanvas"
+                        Grid.RowSpan="2"
+                        Grid.ColumnSpan="2"
+                        IsHitTestVisible="False">
+                        <Ellipse
+                            x:Name="PositionMarker"
+                            Width="18"
+                            Height="18"
+                            Fill="{ThemeResource AccentFillColorDefaultBrush}"
+                            Stroke="{ThemeResource SurfaceStrokeColorDefaultBrush}"
+                            StrokeThickness="2" />
+                    </Canvas>
+                </Grid>
+            </Border>
+        </StackPanel>
+
+        <StackPanel Spacing="6">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock
+                    x:Uid="SizeHeader"
+                    FontSize="16"
+                    FontWeight="SemiBold"
+                    Text="Size" />
+                <TextBlock
+                    x:Name="SizeValueText"
+                    Grid.Column="1"
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+            </Grid>
+            <Slider
+                x:Name="SizeSlider"
+                Minimum="0"
+                Maximum="100"
+                StepFrequency="1"
+                ValueChanged="SizeSlider_ValueChanged" />
+            <HyperlinkButton
+                x:Uid="PointerSettingsButton"
+                HorizontalAlignment="Left"
+                Click="PointerSettings_Click"
+                Content="Pointer size and color settings"
+                Padding="0,4" />
+        </StackPanel>
+
+        <Grid ColumnSpacing="12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="200" />
+            </Grid.ColumnDefinitions>
+            <TextBlock
+                x:Uid="AnimationHeader"
+                VerticalAlignment="Center"
+                FontSize="16"
+                FontWeight="SemiBold"
+                Text="Animation" />
+            <ComboBox
+                x:Name="AnimationComboBox"
+                Grid.Column="1"
+                HorizontalAlignment="Stretch"
+                SelectionChanged="AnimationComboBox_SelectionChanged">
+                <ComboBoxItem x:Uid="AnimationFadeShrink" Content="Fade &amp; shrink" Tag="0" />
+                <ComboBoxItem x:Uid="AnimationCameraShutter" Content="Camera shutter" Tag="1" />
+                <ComboBoxItem x:Uid="AnimationPulse" Content="Pulse" Tag="2" />
+                <ComboBoxItem x:Uid="AnimationWobble" Content="Wobble" Tag="3" />
+            </ComboBox>
+        </Grid>
+
+        <StackPanel Spacing="4">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock
+                    x:Uid="AnimationSpeedHeader"
+                    FontWeight="SemiBold"
+                    Text="Animation speed" />
+                <TextBlock
+                    x:Name="AnimationSpeedValueText"
+                    Grid.Column="1"
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+            </Grid>
+            <Slider
+                x:Name="AnimationSpeedSlider"
+                Minimum="0"
+                Maximum="100"
+                StepFrequency="1"
+                ValueChanged="AnimationSpeedSlider_ValueChanged" />
+        </StackPanel>
+
+        <StackPanel Spacing="6">
+            <Grid ColumnSpacing="12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="200" />
+                </Grid.ColumnDefinitions>
+                <TextBlock
+                    x:Uid="VisibilityHeader"
+                    VerticalAlignment="Center"
+                    FontSize="16"
+                    FontWeight="SemiBold"
+                    Text="Visibility" />
+                <ComboBox
+                    x:Name="VisibilityComboBox"
+                    Grid.Column="1"
+                    HorizontalAlignment="Stretch"
+                    SelectionChanged="VisibilityComboBox_SelectionChanged">
+                    <ComboBoxItem x:Uid="VisibilityUntilNextCopy" Content="Until the next copy" Tag="0" />
+                    <ComboBoxItem x:Uid="VisibilityForDuration" Content="For a set time" Tag="1" />
+                </ComboBox>
+            </Grid>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock
+                    x:Uid="VisibilityDurationHeader"
+                    FontWeight="SemiBold"
+                    Text="Visible for" />
+                <TextBlock
+                    x:Name="VisibilityDurationValueText"
+                    Grid.Column="1"
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+            </Grid>
+            <Slider
+                x:Name="VisibilityDurationSlider"
+                Minimum="1"
+                Maximum="60"
+                StepFrequency="1"
+                ValueChanged="VisibilityDurationSlider_ValueChanged" />
+        </StackPanel>
+
+        <StackPanel Spacing="8">
+            <TextBlock
+                x:Uid="TestIndicatorsHeader"
+                FontSize="16"
+                FontWeight="SemiBold"
+                Text="Test indicators" />
+            <Grid ColumnSpacing="6">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Button
+                    x:Uid="TextIndicatorButton"
+                    AutomationProperties.Name="Text"
+                    HorizontalAlignment="Stretch"
+                    Click="PreviewGlyph_Click"
+                    Tag="3">
+                    <TextBlock
+                        FontSize="16"
+                        FontWeight="Bold"
+                        Text="T" />
+                    <ToolTipService.ToolTip>
+                        <ToolTip x:Uid="TextIndicatorToolTip" Content="Text" />
+                    </ToolTipService.ToolTip>
+                </Button>
+                <Button
+                    x:Uid="RichTextIndicatorButton"
+                    AutomationProperties.Name="Rich text"
+                    Grid.Column="1"
+                    HorizontalAlignment="Stretch"
+                    Click="PreviewGlyph_Click"
+                    Tag="2">
+                    <TextBlock
+                        FontSize="14"
+                        FontWeight="Bold"
+                        Text="RT" />
+                    <ToolTipService.ToolTip>
+                        <ToolTip x:Uid="RichTextIndicatorToolTip" Content="Rich text" />
+                    </ToolTipService.ToolTip>
+                </Button>
+                <Button
+                    x:Uid="ImageIndicatorButton"
+                    AutomationProperties.Name="Image"
+                    Grid.Column="2"
+                    HorizontalAlignment="Stretch"
+                    Click="PreviewGlyph_Click"
+                    Tag="0">
+                    <Viewbox
+                        Width="22"
+                        Height="22">
+                        <Canvas
+                            Width="24"
+                            Height="24">
+                            <Rectangle
+                                Canvas.Left="2"
+                                Canvas.Top="3"
+                                Width="20"
+                                Height="18"
+                                RadiusX="1"
+                                RadiusY="1"
+                                Stroke="{ThemeResource TextFillColorPrimaryBrush}"
+                                StrokeThickness="1.8" />
+                            <Ellipse
+                                Canvas.Left="15"
+                                Canvas.Top="6"
+                                Width="3"
+                                Height="3"
+                                Stroke="{ThemeResource TextFillColorPrimaryBrush}"
+                                StrokeThickness="1.8" />
+                            <Path
+                                Data="M 3,20 L 9,12 L 13,16 L 17,12 L 22,19"
+                                Stroke="{ThemeResource TextFillColorPrimaryBrush}"
+                                StrokeEndLineCap="Round"
+                                StrokeLineJoin="Round"
+                                StrokeStartLineCap="Round"
+                                StrokeThickness="1.8" />
+                        </Canvas>
+                    </Viewbox>
+                    <ToolTipService.ToolTip>
+                        <ToolTip x:Uid="ImageIndicatorToolTip" Content="Image" />
+                    </ToolTipService.ToolTip>
+                </Button>
+                <Button
+                    x:Uid="FilesIndicatorButton"
+                    AutomationProperties.Name="Files"
+                    Grid.Column="3"
+                    HorizontalAlignment="Stretch"
+                    Click="PreviewGlyph_Click"
+                    Tag="1">
+                    <Viewbox
+                        Width="22"
+                        Height="22">
+                        <Canvas
+                            Width="24"
+                            Height="24">
+                            <Path
+                                Data="M 5,2 L 15,2 L 21,8 L 21,22 L 5,22 Z M 15,2 L 15,8 L 21,8"
+                                Stroke="{ThemeResource TextFillColorPrimaryBrush}"
+                                StrokeEndLineCap="Round"
+                                StrokeLineJoin="Round"
+                                StrokeStartLineCap="Round"
+                                StrokeThickness="1.8" />
+                        </Canvas>
+                    </Viewbox>
+                    <ToolTipService.ToolTip>
+                        <ToolTip x:Uid="FilesIndicatorToolTip" Content="Files" />
+                    </ToolTipService.ToolTip>
+                </Button>
+                <Button
+                    x:Uid="ObjectIndicatorButton"
+                    AutomationProperties.Name="Object"
+                    Grid.Column="4"
+                    HorizontalAlignment="Stretch"
+                    Click="PreviewGlyph_Click"
+                    Tag="4">
+                    <Viewbox
+                        Width="22"
+                        Height="22">
+                        <Canvas
+                            Width="24"
+                            Height="24">
+                            <Path
+                                Data="M 12,2 L 22,7.5 L 12,13 L 2,7.5 Z M 2,7.5 L 2,17 L 12,22 L 22,17 L 22,7.5 M 12,13 L 12,22"
+                                Stroke="{ThemeResource TextFillColorPrimaryBrush}"
+                                StrokeEndLineCap="Round"
+                                StrokeLineJoin="Round"
+                                StrokeStartLineCap="Round"
+                                StrokeThickness="1.8" />
+                        </Canvas>
+                    </Viewbox>
+                    <ToolTipService.ToolTip>
+                        <ToolTip x:Uid="ObjectIndicatorToolTip" Content="Object" />
+                    </ToolTipService.ToolTip>
+                </Button>
+            </Grid>
+        </StackPanel>
+
+        <StackPanel Spacing="8">
+            <TextBlock
+                x:Uid="BackupRestoreHeader"
+                FontSize="16"
+                FontWeight="SemiBold"
+                Text="Backup and restore" />
+            <TextBlock
+                x:Uid="BackupRestoreDescription"
+                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                Text="Back up your settings to a JSON file, or restore them from a previous backup."
+                TextWrapping="Wrap" />
+            <Grid ColumnSpacing="12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Button
+                    x:Uid="BackupButton"
+                    HorizontalAlignment="Stretch"
+                    Click="Backup_Click"
+                    Content="Back up..." />
+                <Button
+                    x:Uid="RestoreButton"
+                    Grid.Column="1"
+                    HorizontalAlignment="Stretch"
+                    Click="Restore_Click"
+                    Content="Restore..." />
+            </Grid>
+        </StackPanel>
+
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <HyperlinkButton
+                x:Uid="ResetButton"
+                HorizontalAlignment="Left"
+                Click="Reset_Click"
+                Content="Reset to defaults"
+                Padding="0,4" />
+            <Button
+                x:Uid="DoneButton"
+                Grid.Column="1"
+                MinWidth="96"
+                Click="Close_Click"
+                Content="Done"
+                Style="{ThemeResource AccentButtonStyle}" />
+        </Grid>
+        </StackPanel>
+    </ScrollViewer>
+</Page>
