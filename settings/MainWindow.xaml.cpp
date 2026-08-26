@@ -104,5 +104,60 @@ namespace winrt::CopyPointerNotifier_Settings::implementation
         pageType.Name = winrt::name_of<CopyPointerNotifier_Settings::MainPage>();
         pageType.Kind = winrt::Windows::UI::Xaml::Interop::TypeKind::Metadata;
         RootFrame().Navigate(pageType);
+        RootFrame().Loaded(
+            [this, scale](
+                [[maybe_unused]] IInspectable const&,
+                [[maybe_unused]] RoutedEventArgs const&)
+            {
+                ExpandToFitContent(scale);
+            });
+    }
+
+    void MainWindow::ExpandToFitContent(double scale)
+    {
+        auto page = RootFrame().Content().try_as<FrameworkElement>();
+        if (!page)
+        {
+            return;
+        }
+
+        auto scrollViewer = page.FindName(L"SettingsScrollViewer")
+            .try_as<Controls::ScrollViewer>();
+        if (!scrollViewer || scrollViewer.ScrollableHeight() <= 0)
+        {
+            return;
+        }
+
+        const auto currentSize = AppWindow().Size();
+        const int additionalHeightPx = static_cast<int>(std::ceil(
+            (scrollViewer.ScrollableHeight() + 1.0) * scale));
+        int heightPx = currentSize.Height + additionalHeightPx;
+
+        auto displayArea = DisplayArea::GetFromWindowId(
+            AppWindow().Id(),
+            DisplayAreaFallback::Nearest);
+        if (!displayArea)
+        {
+            AppWindow().Resize(
+                SizeInt32{ currentSize.Width, heightPx });
+            return;
+        }
+
+        const auto workArea = displayArea.WorkArea();
+        const int margin = static_cast<int>(std::lround(24 * scale));
+        heightPx = (std::min)(heightPx, workArea.Height - margin);
+        if (heightPx <= currentSize.Height)
+        {
+            return;
+        }
+
+        AppWindow().Resize(SizeInt32{ currentSize.Width, heightPx });
+        const int x =
+            workArea.X +
+            (std::max)(0, (workArea.Width - currentSize.Width) / 2);
+        const int y =
+            workArea.Y +
+            (std::max)(margin, (workArea.Height - heightPx) / 2);
+        AppWindow().Move(PointInt32{ x, y });
     }
 }

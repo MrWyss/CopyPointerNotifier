@@ -3,9 +3,11 @@
     x:Class="CopyPointerNotifier_Settings.MainPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    Loaded="Page_Loaded">
+    Loaded="Page_Loaded"
+    Unloaded="Page_Unloaded">
 
     <ScrollViewer
+        x:Name="SettingsScrollViewer"
         VerticalScrollBarVisibility="Auto"
         VerticalScrollMode="Auto"
         HorizontalScrollBarVisibility="Disabled">
@@ -343,6 +345,94 @@
                 </Button>
             </Grid>
         </StackPanel>
+
+        <Expander
+            HorizontalAlignment="Stretch"
+            HorizontalContentAlignment="Stretch"
+            IsExpanded="False">
+            <Expander.Header>
+                <StackPanel
+                    Orientation="Horizontal"
+                    Spacing="8">
+                    <FontIcon
+                        FontSize="16"
+                        Glyph="&#xE8A5;" />
+                    <TextBlock
+                        x:Uid="ClipboardStatusExpanderHeader"
+                        Text="Clipboard diagnostics"
+                        VerticalAlignment="Center" />
+                </StackPanel>
+            </Expander.Header>
+            <StackPanel Spacing="8">
+                <TextBlock
+                    x:Uid="ClipboardStatusDescription"
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                    Text="Copy something while Settings is open to inspect its advertised formats."
+                    TextWrapping="Wrap" />
+                <Border
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="12">
+                    <StackPanel Spacing="8">
+                        <Grid ColumnSpacing="12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock
+                                x:Uid="DetectedIndicatorLabel"
+                                FontWeight="SemiBold"
+                                Text="Indicator" />
+                            <TextBlock
+                                x:Name="DetectedIndicatorValueText"
+                                Grid.Column="1"
+                                FontWeight="SemiBold" />
+                        </Grid>
+                        <ScrollViewer
+                            MaxHeight="220"
+                            VerticalScrollBarVisibility="Auto"
+                            VerticalScrollMode="Auto">
+                            <TextBlock
+                                x:Name="ClipboardFormatsText"
+                                FontFamily="Consolas"
+                                FontSize="12"
+                                IsTextSelectionEnabled="True"
+                                TextWrapping="Wrap" />
+                        </ScrollViewer>
+                        <TextBlock
+                            x:Uid="ClipboardSharingDescription"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            Text="Copy this status when reporting an incorrect indicator."
+                            TextWrapping="Wrap" />
+                        <Button
+                            x:Name="CopyClipboardStatusButton"
+                            x:Uid="CopyClipboardStatusButton"
+                            AutomationProperties.Name="Copy clipboard status"
+                            HorizontalAlignment="Stretch"
+                            Click="CopyClipboardStatus_Click"
+                            IsEnabled="False">
+                            <StackPanel
+                                Orientation="Horizontal"
+                                Spacing="6">
+                                <FontIcon
+                                    FontSize="14"
+                                    Glyph="&#xE8C8;" />
+                                <TextBlock
+                                    x:Uid="CopyClipboardStatusButtonLabel"
+                                    Text="Copy status" />
+                            </StackPanel>
+                            <ToolTipService.ToolTip>
+                                <ToolTip
+                                    x:Uid="CopyClipboardStatusToolTip"
+                                    Content="Copy clipboard status" />
+                            </ToolTipService.ToolTip>
+                        </Button>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </Expander>
 
         <StackPanel Spacing="8">
             <TextBlock

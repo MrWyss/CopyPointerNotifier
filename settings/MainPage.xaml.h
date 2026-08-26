@@ -8,6 +8,7 @@ namespace winrt::CopyPointerNotifier_Settings::implementation
         MainPage();
 
         void Page_Loaded(Windows::Foundation::IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void Page_Unloaded(Windows::Foundation::IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
         void PositionPad_SizeChanged(Windows::Foundation::IInspectable const&, Microsoft::UI::Xaml::SizeChangedEventArgs const&);
         void PositionPad_PointerPressed(Windows::Foundation::IInspectable const&, Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const&);
         void PositionPad_PointerMoved(Windows::Foundation::IInspectable const&, Microsoft::UI::Xaml::Input::PointerRoutedEventArgs const&);
@@ -20,6 +21,7 @@ namespace winrt::CopyPointerNotifier_Settings::implementation
         void Reset_Click(Windows::Foundation::IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
         void Close_Click(Windows::Foundation::IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
         void PreviewGlyph_Click(Windows::Foundation::IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void CopyClipboardStatus_Click(Windows::Foundation::IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
         void PointerSettings_Click(Windows::Foundation::IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
         void Backup_Click(Windows::Foundation::IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
         void Restore_Click(Windows::Foundation::IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
@@ -47,8 +49,11 @@ namespace winrt::CopyPointerNotifier_Settings::implementation
         bool m_loaded{ false };
         bool m_dragging{ false };
         uint32_t m_pointerId{ 0 };
+        uint32_t m_lastClipboardSequence{ 0 };
         int m_xPercent{ DefaultX };
         int m_yPercent{ DefaultY };
+        std::wstring m_clipboardDiagnosticText;
+        Microsoft::UI::Xaml::DispatcherTimer m_clipboardStatusTimer{ nullptr };
 
         struct BackupSettings
         {
@@ -67,6 +72,10 @@ namespace winrt::CopyPointerNotifier_Settings::implementation
         void UpdatePositionMarker();
         void UpdateLabels();
         void UpdateVisibilityControls();
+        void UpdateClipboardStatus();
+        void ClipboardStatusTimer_Tick(
+            Windows::Foundation::IInspectable const&,
+            Windows::Foundation::IInspectable const&);
         void SaveSettings();
         void NotifyNative(uint32_t message, uintptr_t value = 0);
 
