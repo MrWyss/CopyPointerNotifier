@@ -20,9 +20,7 @@ std::optional<ClipboardContentType> ClassifyClipboardFormats(
 
     if (Contains(formats, CF_DIBV5) ||
         Contains(formats, CF_DIB) ||
-        Contains(formats, CF_BITMAP) ||
-        Contains(formats, CF_ENHMETAFILE) ||
-        Contains(formats, CF_METAFILEPICT)) {
+        Contains(formats, CF_BITMAP)) {
         return ClipboardContentType::Image;
     }
 
@@ -38,6 +36,11 @@ std::optional<ClipboardContentType> ClassifyClipboardFormats(
         Contains(formats, CF_TEXT) ||
         Contains(formats, CF_OEMTEXT)) {
         return ClipboardContentType::Text;
+    }
+
+    if (Contains(formats, CF_ENHMETAFILE) ||
+        Contains(formats, CF_METAFILEPICT)) {
+        return ClipboardContentType::Image;
     }
 
     return ClipboardContentType::Object;

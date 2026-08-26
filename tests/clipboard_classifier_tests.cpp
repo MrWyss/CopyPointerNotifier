@@ -32,6 +32,15 @@ int main() {
     Expect({CF_UNICODETEXT, kRichText}, ClipboardContentType::RichText);
     Expect({CF_UNICODETEXT, kRichText, CF_HDROP}, ClipboardContentType::Files);
     Expect({CF_UNICODETEXT, kRichText, CF_HDROP, CF_DIB}, ClipboardContentType::Image);
+    Expect({CF_UNICODETEXT, kRichText, CF_ENHMETAFILE},
+           ClipboardContentType::RichText);
+    Expect({CF_UNICODETEXT, kHtml, CF_METAFILEPICT},
+           ClipboardContentType::RichText);
+    Expect({CF_UNICODETEXT, CF_ENHMETAFILE}, ClipboardContentType::Text);
+    Expect({CF_TEXT, CF_METAFILEPICT}, ClipboardContentType::Text);
+    Expect({kRichText, CF_BITMAP}, ClipboardContentType::Image);
+    Expect({CF_ENHMETAFILE}, ClipboardContentType::Image);
+    Expect({CF_METAFILEPICT}, ClipboardContentType::Image);
     Expect({kHtml}, ClipboardContentType::RichText);
     return 0;
 }
