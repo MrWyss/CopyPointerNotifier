@@ -96,6 +96,7 @@
     <ClInclude Include="App.xaml.h" />
     <ClInclude Include="MainWindow.xaml.h" />
     <ClInclude Include="MainPage.xaml.h" />
+    <ClInclude Include="..\src\clipboard_classifier.hpp" />
   </ItemGroup>
 
   <ItemGroup>
@@ -106,6 +107,9 @@
     <ClCompile Include="MainWindow.xaml.cpp" />
     <ClCompile Include="MainPage.xaml.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="..\src\clipboard_classifier.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
   </ItemGroup>
 
   <ItemGroup>

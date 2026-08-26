@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "MainPage.xaml.h"
+#include "../src/clipboard_classifier.hpp"
 #if __has_include("MainPage.g.cpp")
 #include "MainPage.g.cpp"
 #endif
@@ -21,6 +22,63 @@ namespace winrt::CopyPointerNotifier_Settings::implementation
 {
     namespace
     {
+        void CopyTextToClipboard(HWND owner, std::wstring_view text)
+        {
+            constexpr int maxAttempts = 10;
+            constexpr DWORD retryDelayMs = 20;
+
+            bool opened = false;
+            for (int attempt = 0; attempt < maxAttempts; ++attempt)
+            {
+                if (OpenClipboard(owner))
+                {
+                    opened = true;
+                    break;
+                }
+                Sleep(retryDelayMs);
+            }
+            if (!opened)
+            {
+                throw hresult_error(
+                    HRESULT_FROM_WIN32(ERROR_ACCESS_DENIED),
+                    L"The clipboard is busy.");
+            }
+
+            struct ClipboardCloser
+            {
+                ~ClipboardCloser()
+                {
+                    CloseClipboard();
+                }
+            } closer;
+
+            check_bool(EmptyClipboard());
+
+            const size_t byteCount = (text.size() + 1) * sizeof(wchar_t);
+            HGLOBAL memory = GlobalAlloc(GMEM_MOVEABLE, byteCount);
+            if (!memory)
+            {
+                throw_last_error();
+            }
+
+            void* buffer = GlobalLock(memory);
+            if (!buffer)
+            {
+                GlobalFree(memory);
+                throw_last_error();
+            }
+
+            memcpy(buffer, text.data(), text.size() * sizeof(wchar_t));
+            static_cast<wchar_t*>(buffer)[text.size()] = L'\0';
+            GlobalUnlock(memory);
+
+            if (!SetClipboardData(CF_UNICODETEXT, memory))
+            {
+                GlobalFree(memory);
+                throw_last_error();
+            }
+        }
+
         std::optional<std::filesystem::path> PickJsonFile(
             HWND owner,
             bool save,
@@ -65,6 +123,10 @@ namespace winrt::CopyPointerNotifier_Settings::implementation
     MainPage::MainPage()
     {
         InitializeComponent();
+        m_clipboardStatusTimer = DispatcherTimer{};
+        m_clipboardStatusTimer.Interval(std::chrono::milliseconds{ 250 });
+        m_clipboardStatusTimer.Tick(
+            { this, &MainPage::ClipboardStatusTimer_Tick });
     }
 
     // --- Registry helpers ---
@@ -142,6 +204,16 @@ namespace winrt::CopyPointerNotifier_Settings::implementation
         m_loaded = true;
         UpdatePositionMarker();
         UpdateLabels();
+        m_lastClipboardSequence = 0;
+        UpdateClipboardStatus();
+        m_clipboardStatusTimer.Start();
+    }
+
+    void MainPage::Page_Unloaded(
+        [[maybe_unused]] IInspectable const&,
+        [[maybe_unused]] RoutedEventArgs const&)
+    {
+        m_clipboardStatusTimer.Stop();
     }
 
     // --- Position pad ---
@@ -268,6 +340,80 @@ namespace winrt::CopyPointerNotifier_Settings::implementation
         VisibilityDurationValueText().Opacity(isTimed ? 1.0 : 0.5);
     }
 
+    void MainPage::ClipboardStatusTimer_Tick(
+        [[maybe_unused]] IInspectable const&,
+        [[maybe_unused]] IInspectable const&)
+    {
+        UpdateClipboardStatus();
+    }
+
+    void MainPage::UpdateClipboardStatus()
+    {
+        const DWORD sequence = GetClipboardSequenceNumber();
+        if (sequence != 0 && sequence == m_lastClipboardSequence)
+        {
+            return;
+        }
+
+        const ClipboardReadResult result =
+            ReadClipboardContentType(GetWindowHandle());
+        if (!result.clipboardOpened)
+        {
+            m_clipboardDiagnosticText.clear();
+            CopyClipboardStatusButton().IsEnabled(false);
+            DetectedIndicatorValueText().Text(
+                m_resources.GetString(L"ClipboardUnavailable"));
+            ClipboardFormatsText().Text(
+                m_resources.GetString(L"ClipboardUnavailableDescription"));
+            return;
+        }
+
+        m_lastClipboardSequence = sequence;
+
+        hstring indicator;
+        if (!result.contentType)
+        {
+            indicator = m_resources.GetString(L"ClipboardIndicatorNone");
+        }
+        else
+        {
+            switch (*result.contentType)
+            {
+                case ClipboardContentType::Image: indicator = L"Image"; break;
+                case ClipboardContentType::Files: indicator = L"Files"; break;
+                case ClipboardContentType::RichText: indicator = L"RT"; break;
+                case ClipboardContentType::Text: indicator = L"T"; break;
+                case ClipboardContentType::Object: indicator = L"Object"; break;
+            }
+        }
+        DetectedIndicatorValueText().Text(indicator);
+
+        std::wstring formatList;
+        for (const UINT format : result.formats)
+        {
+            if (!formatList.empty())
+            {
+                formatList += L"\n";
+            }
+            formatList += DescribeClipboardFormat(format);
+            formatList += L" (";
+            formatList += std::to_wstring(format);
+            formatList += L")";
+        }
+        if (formatList.empty())
+        {
+            formatList = m_resources.GetString(L"ClipboardFormatsEmpty");
+        }
+        ClipboardFormatsText().Text(hstring{ formatList });
+
+        m_clipboardDiagnosticText =
+            std::wstring{ m_resources.GetString(L"ClipboardReportIndicatorLabel") } +
+            L": " + std::wstring{ indicator } + L"\n" +
+            std::wstring{ m_resources.GetString(L"ClipboardReportFormatsLabel") } +
+            L":\n" + formatList;
+        CopyClipboardStatusButton().IsEnabled(true);
+    }
+
     // --- Save settings ---
 
     void MainPage::SaveSettings()
@@ -346,6 +492,35 @@ namespace winrt::CopyPointerNotifier_Settings::implementation
         try { contentType = static_cast<uint32_t>(std::stoul(std::wstring(tagStr))); }
         catch (...) { return; }
         NotifyNative(PreviewGlyphMessage, contentType);
+    }
+
+    void MainPage::CopyClipboardStatus_Click(
+        [[maybe_unused]] IInspectable const&,
+        [[maybe_unused]] RoutedEventArgs const&)
+    {
+        if (m_clipboardDiagnosticText.empty())
+        {
+            return;
+        }
+
+        try
+        {
+            CopyTextToClipboard(
+                GetWindowHandle(),
+                m_clipboardDiagnosticText);
+
+            // Keep the captured report visible instead of inspecting our own copy.
+            m_lastClipboardSequence = GetClipboardSequenceNumber();
+        }
+        catch (hresult_error const& error)
+        {
+            const hstring explanation =
+                m_resources.GetString(L"ClipboardCopyFailedMessage") +
+                L"\n\n" + error.message();
+            ShowError(
+                m_resources.GetString(L"ClipboardCopyFailedTitle"),
+                explanation);
+        }
     }
 
     void MainPage::PointerSettings_Click([[maybe_unused]] IInspectable const&, [[maybe_unused]] RoutedEventArgs const&)

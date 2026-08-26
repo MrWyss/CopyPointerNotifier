@@ -31,6 +31,21 @@
   <data name="ImageIndicatorToolTip.Content" xml:space="preserve"><value>Image</value></data>
   <data name="FilesIndicatorToolTip.Content" xml:space="preserve"><value>Files</value></data>
   <data name="ObjectIndicatorToolTip.Content" xml:space="preserve"><value>Object</value></data>
+  <data name="ClipboardStatusExpanderHeader.Text" xml:space="preserve"><value>Clipboard diagnostics</value></data>
+  <data name="ClipboardStatusDescription.Text" xml:space="preserve"><value>Copy something while Settings is open to inspect its advertised formats.</value></data>
+  <data name="DetectedIndicatorLabel.Text" xml:space="preserve"><value>Indicator</value></data>
+  <data name="ClipboardSharingDescription.Text" xml:space="preserve"><value>Copy this status when reporting an incorrect indicator.</value></data>
+  <data name="CopyClipboardStatusButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Copy clipboard status</value></data>
+  <data name="CopyClipboardStatusButtonLabel.Text" xml:space="preserve"><value>Copy status</value></data>
+  <data name="CopyClipboardStatusToolTip.Content" xml:space="preserve"><value>Copy clipboard status</value></data>
+  <data name="ClipboardReportIndicatorLabel" xml:space="preserve"><value>Indicator</value></data>
+  <data name="ClipboardReportFormatsLabel" xml:space="preserve"><value>Formats</value></data>
+  <data name="ClipboardCopyFailedTitle" xml:space="preserve"><value>Copy failed</value></data>
+  <data name="ClipboardCopyFailedMessage" xml:space="preserve"><value>Clipboard diagnostics could not be copied. Please try again.</value></data>
+  <data name="ClipboardUnavailable" xml:space="preserve"><value>Unavailable</value></data>
+  <data name="ClipboardUnavailableDescription" xml:space="preserve"><value>The clipboard is temporarily in use. Waiting to retry...</value></data>
+  <data name="ClipboardIndicatorNone" xml:space="preserve"><value>None</value></data>
+  <data name="ClipboardFormatsEmpty" xml:space="preserve"><value>No clipboard formats are available.</value></data>
   <data name="BackupRestoreHeader.Text" xml:space="preserve"><value>Backup and restore</value></data>
   <data name="BackupRestoreDescription.Text" xml:space="preserve"><value>Back up your settings to a JSON file, or restore them from a previous backup.</value></data>
   <data name="BackupButton.Content" xml:space="preserve"><value>Back up...</value></data>

@@ -6,6 +6,9 @@ namespace winrt::CopyPointerNotifier_Settings::implementation
     struct MainWindow : MainWindowT<MainWindow>
     {
         MainWindow();
+
+    private:
+        void ExpandToFitContent(double scale);
     };
 }
 

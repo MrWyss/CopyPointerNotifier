@@ -1,7 +1,7 @@
 #include "clipboard_classifier.hpp"
 #include "glyph_scale.hpp"
 
-#include <cassert>
+#include <cstdlib>
 #include <initializer_list>
 #include <optional>
 #include <vector>
@@ -16,7 +16,9 @@ void Expect(
     std::initializer_list<UINT> formats,
     std::optional<ClipboardContentType> expected) {
     const std::vector<UINT> values(formats);
-    assert(ClassifyClipboardFormats(values, kRichText, kHtml) == expected);
+    if (ClassifyClipboardFormats(values, kRichText, kHtml) != expected) {
+        std::abort();
+    }
 }
 
 }  // namespace
@@ -25,6 +27,11 @@ int main() {
     static_assert(EffectiveGlyphScalePercent(0) == 0.0F);
     static_assert(EffectiveGlyphScalePercent(50) == 50.0F);
     static_assert(EffectiveGlyphScalePercent(100) == 160.0F);
+
+    if (DescribeClipboardFormat(CF_DIBV5) != L"CF_DIBV5" ||
+        DescribeClipboardFormat(CF_ENHMETAFILE) != L"CF_ENHMETAFILE") {
+        std::abort();
+    }
 
     Expect({}, std::nullopt);
     Expect({kUnknown}, ClipboardContentType::Object);
@@ -39,6 +46,26 @@ int main() {
     Expect({CF_UNICODETEXT, CF_ENHMETAFILE}, ClipboardContentType::Text);
     Expect({CF_TEXT, CF_METAFILEPICT}, ClipboardContentType::Text);
     Expect({kRichText, CF_BITMAP}, ClipboardContentType::Image);
+    Expect(
+        {kRichText, CF_UNICODETEXT, CF_BITMAP, CF_DIB, CF_DIBV5},
+        ClipboardContentType::RichText);
+    Expect(
+        {
+            kHtml,
+            kRichText,
+            CF_UNICODETEXT,
+            CF_BITMAP,
+            CF_ENHMETAFILE,
+            CF_METAFILEPICT,
+            CF_TEXT,
+            CF_OEMTEXT,
+            CF_DIB,
+            CF_DIBV5,
+        },
+        ClipboardContentType::RichText);
+    Expect(
+        {kHtml, CF_UNICODETEXT, CF_BITMAP, CF_DIB},
+        ClipboardContentType::Image);
     Expect({CF_ENHMETAFILE}, ClipboardContentType::Image);
     Expect({CF_METAFILEPICT}, ClipboardContentType::Image);
     Expect({kHtml}, ClipboardContentType::RichText);
