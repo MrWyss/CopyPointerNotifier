@@ -225,6 +225,7 @@
           DestinationFolder="$(OutDir)Assets" SkipUnchangedFiles="true" />
     <Exec Command="&quot;$(_MakePriExe)&quot; createconfig /cf &quot;$(OutDir)priconfig.xml&quot; /dq en-US /o"
           Condition="Exists('$(_MakePriExe)')" />
+    <Delete Files="$(OutDir)resources.pri" />
     <Exec Command="&quot;$(_MakePriExe)&quot; new /pr &quot;$(OutDir).&quot; /cf &quot;$(OutDir)priconfig.xml&quot; /of &quot;$(OutDir)resources.pri&quot; /o"
           Condition="Exists('$(_MakePriExe)')" />
     <Delete Files="$(OutDir)priconfig.xml" />

@@ -145,42 +145,18 @@ namespace winrt::CopyPointerNotifier_Settings::implementation
             ULONG_PTR m_token = 0;
         };
 
-        FrameworkElement CreateGlyphVisual(
-            std::wstring_view glyph,
-            const wchar_t* brushResource = L"TextFillColorPrimaryBrush")
+        Media::PathGeometry CreatePathGeometry(
+            Gdiplus::GraphicsPath& outline)
         {
-            static GdiplusSession gdiplus;
             constexpr float visualSize = 24.0F;
             constexpr float padding = 1.0F;
 
-            Gdiplus::FontFamily family(GlyphFontFamilyName(glyph));
-            Gdiplus::StringFormat format;
-            format.SetFormatFlags(Gdiplus::StringFormatFlagsNoWrap);
-            Gdiplus::GraphicsPath outline;
-            const auto status = outline.AddString(
-                glyph.data(),
-                static_cast<INT>(glyph.size()),
-                &family,
-                Gdiplus::FontStyleBold,
-                28.0F,
-                Gdiplus::PointF{},
-                &format);
             Gdiplus::RectF bounds;
-            if (status != Gdiplus::Ok ||
-                outline.GetBounds(&bounds) != Gdiplus::Ok ||
+            if (outline.GetBounds(&bounds) != Gdiplus::Ok ||
                 bounds.Width <= 0.0F ||
                 bounds.Height <= 0.0F)
             {
-                TextBlock fallback;
-                fallback.Text(hstring{ glyph });
-                fallback.IsColorFontEnabled(true);
-                fallback.FontSize(20);
-                fallback.Foreground(
-                    Application::Current().Resources().Lookup(
-                        box_value(brushResource))
-                        .as<Media::Brush>());
-                fallback.Width(30);
-                return fallback;
+                return nullptr;
             }
 
             const INT pointCount = outline.GetPointCount();
@@ -253,6 +229,107 @@ namespace winrt::CopyPointerNotifier_Settings::implementation
                 }
             }
 
+            return geometry;
+        }
+
+        Media::PathGeometry CreateGlyphGeometry(std::wstring_view glyph)
+        {
+            static GdiplusSession gdiplus;
+            Gdiplus::FontFamily family(GlyphFontFamilyName(glyph));
+            Gdiplus::StringFormat format;
+            format.SetFormatFlags(Gdiplus::StringFormatFlagsNoWrap);
+            Gdiplus::GraphicsPath outline;
+            if (outline.AddString(
+                    glyph.data(),
+                    static_cast<INT>(glyph.size()),
+                    &family,
+                    Gdiplus::FontStyleBold,
+                    28.0F,
+                    Gdiplus::PointF{},
+                    &format) != Gdiplus::Ok)
+            {
+                return nullptr;
+            }
+            return CreatePathGeometry(outline);
+        }
+
+        Media::PathGeometry CreateBuiltInGeometry(
+            ClipboardContentType contentType)
+        {
+            static GdiplusSession gdiplus;
+            Gdiplus::GraphicsPath outline;
+            Gdiplus::Pen pen(Gdiplus::Color::Black, 1.8F);
+            pen.SetLineCap(Gdiplus::LineCapRound, Gdiplus::LineCapRound, Gdiplus::DashCapRound);
+            pen.SetLineJoin(Gdiplus::LineJoinRound);
+
+            switch (contentType)
+            {
+                case ClipboardContentType::Image:
+                {
+                    outline.AddRectangle(Gdiplus::RectF{ 2, 3, 20, 18 });
+                    outline.AddEllipse(Gdiplus::RectF{ 15, 6, 3, 3 });
+                    const Gdiplus::PointF mountains[]{
+                        { 3, 20 }, { 9, 12 }, { 13, 16 },
+                        { 17, 12 }, { 22, 19 } };
+                    outline.AddLines(mountains, ARRAYSIZE(mountains));
+                    break;
+                }
+                case ClipboardContentType::Files:
+                {
+                    const Gdiplus::PointF page[]{
+                        { 5, 2 }, { 15, 2 }, { 21, 8 },
+                        { 21, 22 }, { 5, 22 } };
+                    outline.AddPolygon(page, ARRAYSIZE(page));
+                    const Gdiplus::PointF fold[]{
+                        { 15, 2 }, { 15, 8 }, { 21, 8 } };
+                    outline.AddLines(fold, ARRAYSIZE(fold));
+                    break;
+                }
+                case ClipboardContentType::Object:
+                {
+                    const Gdiplus::PointF top[]{
+                        { 12, 2 }, { 22, 7.5F }, { 12, 13 },
+                        { 2, 7.5F } };
+                    outline.AddPolygon(top, ARRAYSIZE(top));
+                    const Gdiplus::PointF left[]{
+                        { 2, 7.5F }, { 2, 17 }, { 12, 22 },
+                        { 22, 17 }, { 22, 7.5F } };
+                    outline.AddLines(left, ARRAYSIZE(left));
+                    const Gdiplus::PointF center[]{
+                        { 12, 13 }, { 12, 22 } };
+                    outline.AddLines(center, ARRAYSIZE(center));
+                    break;
+                }
+                default:
+                    return nullptr;
+            }
+
+            if (outline.Widen(&pen) != Gdiplus::Ok)
+            {
+                return nullptr;
+            }
+            return CreatePathGeometry(outline);
+        }
+
+        FrameworkElement CreateGlyphVisual(
+            std::wstring_view glyph,
+            const wchar_t* brushResource = L"TextFillColorPrimaryBrush")
+        {
+            const auto geometry = CreateGlyphGeometry(glyph);
+            if (!geometry)
+            {
+                TextBlock fallback;
+                fallback.Text(hstring{ glyph });
+                fallback.IsColorFontEnabled(true);
+                fallback.FontSize(20);
+                fallback.Foreground(
+                    Application::Current().Resources().Lookup(
+                        box_value(brushResource))
+                        .as<Media::Brush>());
+                fallback.Width(30);
+                return fallback;
+            }
+
             Shapes::Path preview;
             preview.Data(geometry);
             preview.Fill(
@@ -260,7 +337,7 @@ namespace winrt::CopyPointerNotifier_Settings::implementation
                     box_value(brushResource))
                     .as<Media::Brush>());
             preview.Width(30);
-            preview.Height(visualSize);
+            preview.Height(24);
             preview.HorizontalAlignment(HorizontalAlignment::Left);
             preview.VerticalAlignment(VerticalAlignment::Center);
             return preview;
@@ -310,6 +387,44 @@ namespace winrt::CopyPointerNotifier_Settings::implementation
                     return CreateGlyphVisual(L"?");
             }
             return Markup::XamlReader::Load(markup).as<FrameworkElement>();
+        }
+
+        IconElement CreateGlyphIcon(std::wstring_view glyph)
+        {
+            const auto geometry = CreateGlyphGeometry(glyph);
+            if (geometry)
+            {
+                PathIcon icon;
+                icon.Data(geometry);
+                return icon;
+            }
+
+            FontIcon icon;
+            icon.Glyph(hstring{ glyph });
+            icon.FontFamily(
+                Media::FontFamily{ GlyphFontFamilyName(glyph) });
+            return icon;
+        }
+
+        IconElement CreateBuiltInIcon(ClipboardContentType contentType)
+        {
+            if (contentType == ClipboardContentType::Text)
+            {
+                return CreateGlyphIcon(L"T");
+            }
+            if (contentType == ClipboardContentType::RichText)
+            {
+                return CreateGlyphIcon(L"RT");
+            }
+
+            const auto geometry = CreateBuiltInGeometry(contentType);
+            if (geometry)
+            {
+                PathIcon icon;
+                icon.Data(geometry);
+                return icon;
+            }
+            return CreateGlyphIcon(L"?");
         }
     }
 
@@ -638,6 +753,160 @@ namespace winrt::CopyPointerNotifier_Settings::implementation
         }
     }
 
+    void MainPage::SelectBuiltInTestIndicator(
+        ClipboardContentType contentType)
+    {
+        m_selectedTestRuleId.reset();
+        m_selectedTestContentType = contentType;
+        TestIndicatorDropDownButton().Content(
+            CreateBuiltInVisual(contentType));
+
+        hstring name;
+        switch (contentType)
+        {
+            case ClipboardContentType::Image:
+                name = m_resources.GetString(L"BuiltInImageName");
+                break;
+            case ClipboardContentType::Files:
+                name = m_resources.GetString(L"BuiltInFilesName");
+                break;
+            case ClipboardContentType::RichText:
+                name = m_resources.GetString(L"BuiltInRichTextName");
+                break;
+            case ClipboardContentType::Text:
+                name = m_resources.GetString(L"BuiltInTextName");
+                break;
+            case ClipboardContentType::Object:
+                name = m_resources.GetString(L"BuiltInObjectName");
+                break;
+        }
+        Automation::AutomationProperties::SetName(
+            TestIndicatorDropDownButton(), name);
+    }
+
+    void MainPage::SelectCustomTestIndicator(std::uint64_t ruleId)
+    {
+        const auto rule = std::ranges::find_if(
+            m_rules,
+            [ruleId](const ClipboardRule& candidate)
+            {
+                return candidate.id == ruleId;
+            });
+        if (rule == m_rules.end())
+        {
+            SelectBuiltInTestIndicator(ClipboardContentType::Text);
+            return;
+        }
+
+        m_selectedTestRuleId = ruleId;
+        TestIndicatorDropDownButton().Content(
+            CreateGlyphVisual(rule->glyph));
+        Automation::AutomationProperties::SetName(
+            TestIndicatorDropDownButton(), hstring{ rule->name });
+    }
+
+    void MainPage::RefreshTestIndicatorMenu()
+    {
+        if (!TestIndicatorMenu() || !TestIndicatorDropDownButton())
+        {
+            return;
+        }
+        TestIndicatorMenu().Items().Clear();
+        auto weak = get_weak();
+
+        const auto appendBuiltIn =
+            [&](ClipboardContentType contentType, hstring const& name)
+            {
+                MenuFlyoutItem item;
+                item.Text(name);
+                item.Icon(CreateBuiltInIcon(contentType));
+                item.Click(
+                    [weak, contentType](
+                        [[maybe_unused]] IInspectable const&,
+                        [[maybe_unused]] RoutedEventArgs const&)
+                    {
+                        if (auto self = weak.get())
+                        {
+                            self->SelectBuiltInTestIndicator(contentType);
+                        }
+                    });
+                TestIndicatorMenu().Items().Append(item);
+            };
+
+        appendBuiltIn(
+            ClipboardContentType::Text,
+            m_resources.GetString(L"BuiltInTextName"));
+        appendBuiltIn(
+            ClipboardContentType::RichText,
+            m_resources.GetString(L"BuiltInRichTextName"));
+        appendBuiltIn(
+            ClipboardContentType::Image,
+            m_resources.GetString(L"BuiltInImageName"));
+        appendBuiltIn(
+            ClipboardContentType::Files,
+            m_resources.GetString(L"BuiltInFilesName"));
+        appendBuiltIn(
+            ClipboardContentType::Object,
+            m_resources.GetString(L"BuiltInObjectName"));
+
+        if (!m_rules.empty())
+        {
+            TestIndicatorMenu().Items().Append(MenuFlyoutSeparator{});
+        }
+        for (const auto& rule : m_rules)
+        {
+            MenuFlyoutItem item;
+            item.Text(hstring{ rule.name });
+            item.Icon(CreateGlyphIcon(rule.glyph));
+            item.Click(
+                [weak, ruleId = rule.id](
+                    [[maybe_unused]] IInspectable const&,
+                    [[maybe_unused]] RoutedEventArgs const&)
+                {
+                    if (auto self = weak.get())
+                    {
+                        self->SelectCustomTestIndicator(ruleId);
+                    }
+                });
+            TestIndicatorMenu().Items().Append(item);
+        }
+
+        if (m_selectedTestRuleId)
+        {
+            SelectCustomTestIndicator(*m_selectedTestRuleId);
+        }
+        else
+        {
+            SelectBuiltInTestIndicator(m_selectedTestContentType);
+        }
+    }
+
+    void MainPage::TestSelectedIndicator_Click(
+        [[maybe_unused]] IInspectable const&,
+        [[maybe_unused]] RoutedEventArgs const&)
+    {
+        if (m_selectedTestRuleId)
+        {
+            const auto rule = std::ranges::find_if(
+                m_rules,
+                [this](const ClipboardRule& candidate)
+                {
+                    return candidate.id == *m_selectedTestRuleId;
+                });
+            if (rule != m_rules.end())
+            {
+                NotifyNative(
+                    PreviewCustomGlyphMessage,
+                    static_cast<std::uintptr_t>(rule->id));
+                return;
+            }
+            SelectBuiltInTestIndicator(ClipboardContentType::Text);
+        }
+        NotifyNative(
+            PreviewGlyphMessage,
+            static_cast<std::uintptr_t>(m_selectedTestContentType));
+    }
+
     void MainPage::RulesListView_DragItemsCompleted(
         [[maybe_unused]] ListViewBase const& sender,
         [[maybe_unused]] DragItemsCompletedEventArgs const& args)
@@ -839,6 +1108,7 @@ namespace winrt::CopyPointerNotifier_Settings::implementation
         appendRow(BuiltInRulesListView(), CreateBuiltInVisual(ClipboardContentType::RichText), m_resources.GetString(L"BuiltInRichTextName"), locked, std::nullopt);
         appendRow(BuiltInRulesListView(), CreateBuiltInVisual(ClipboardContentType::Text), m_resources.GetString(L"BuiltInTextName"), locked, std::nullopt);
         appendRow(BuiltInRulesListView(), CreateBuiltInVisual(ClipboardContentType::Object), m_resources.GetString(L"BuiltInObjectName"), locked, std::nullopt);
+        RefreshTestIndicatorMenu();
     }
 
     winrt::fire_and_forget MainPage::EditRuleAsync(
@@ -1287,9 +1557,28 @@ namespace winrt::CopyPointerNotifier_Settings::implementation
 
     void MainPage::Reset_Click([[maybe_unused]] IInspectable const&, [[maybe_unused]] RoutedEventArgs const&)
     {
+        ResetAsync();
+    }
+
+    winrt::fire_and_forget MainPage::ResetAsync()
+    {
+        auto strong = get_strong();
+        ContentDialog dialog;
+        dialog.XamlRoot(XamlRoot());
+        dialog.Title(box_value(m_resources.GetString(L"ResetConfirmTitle")));
+        dialog.Content(box_value(m_resources.GetString(L"ResetConfirmMessage")));
+        dialog.PrimaryButtonText(m_resources.GetString(L"ResetConfirmButton"));
+        dialog.CloseButtonText(m_resources.GetString(L"CancelButton"));
+        dialog.DefaultButton(ContentDialogButton::Close);
+
+        if (co_await dialog.ShowAsync() != ContentDialogResult::Primary)
+        {
+            co_return;
+        }
+
         if (!PersistRules({}))
         {
-            return;
+            co_return;
         }
         m_xPercent = DefaultX;
         m_yPercent = DefaultY;
@@ -1301,35 +1590,6 @@ namespace winrt::CopyPointerNotifier_Settings::implementation
         SaveSettings();
         UpdatePositionMarker();
         UpdateLabels();
-    }
-
-    void MainPage::Close_Click([[maybe_unused]] IInspectable const&, [[maybe_unused]] RoutedEventArgs const&)
-    {
-        if (HWND window = GetWindowHandle())
-        {
-            PostMessageW(window, WM_CLOSE, 0, 0);
-        }
-    }
-
-    void MainPage::PreviewGlyph_Click(IInspectable const& sender, [[maybe_unused]] RoutedEventArgs const&)
-    {
-        auto element = sender.try_as<FrameworkElement>();
-        if (!element) return;
-        auto tag = element.Tag();
-        if (!tag) return;
-        auto tagStr = unbox_value_or<hstring>(tag, L"");
-        wchar_t* end = nullptr;
-        const unsigned long contentType =
-            std::wcstoul(tagStr.c_str(), &end, 10);
-        if (end == tagStr.c_str() || *end != L'\0' ||
-            contentType > static_cast<unsigned long>(
-                ClipboardContentType::Object))
-        {
-            return;
-        }
-        NotifyNative(
-            PreviewGlyphMessage,
-            static_cast<std::uint32_t>(contentType));
     }
 
     void MainPage::CopyClipboardStatus_Click(

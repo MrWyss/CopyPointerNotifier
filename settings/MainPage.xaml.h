@@ -20,8 +20,7 @@ namespace winrt::CopyPointerNotifier_Settings::implementation
         void VisibilityComboBox_SelectionChanged(Windows::Foundation::IInspectable const&, Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const&);
         void VisibilityDurationSlider_ValueChanged(Windows::Foundation::IInspectable const&, Microsoft::UI::Xaml::Controls::Primitives::RangeBaseValueChangedEventArgs const&);
         void Reset_Click(Windows::Foundation::IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
-        void Close_Click(Windows::Foundation::IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
-        void PreviewGlyph_Click(Windows::Foundation::IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void TestSelectedIndicator_Click(Windows::Foundation::IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
         void CopyClipboardStatus_Click(Windows::Foundation::IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
         void PointerSettings_Click(Windows::Foundation::IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
         void Backup_Click(Windows::Foundation::IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
@@ -64,6 +63,9 @@ namespace winrt::CopyPointerNotifier_Settings::implementation
         std::wstring m_clipboardDiagnosticText;
         Microsoft::UI::Xaml::DispatcherTimer m_clipboardStatusTimer{ nullptr };
         std::vector<ClipboardRule> m_rules;
+        std::optional<std::uint64_t> m_selectedTestRuleId;
+        ClipboardContentType m_selectedTestContentType{
+            ClipboardContentType::Text };
 
         struct BackupSettings
         {
@@ -95,6 +97,9 @@ namespace winrt::CopyPointerNotifier_Settings::implementation
         void ToggleRule(std::size_t index);
         void DeleteRule(std::size_t index);
         void TestRule(std::size_t index);
+        void RefreshTestIndicatorMenu();
+        void SelectBuiltInTestIndicator(ClipboardContentType contentType);
+        void SelectCustomTestIndicator(std::uint64_t ruleId);
 
         static int ReadDword(HKEY key, const wchar_t* name, int fallback);
         static int ToPercent(double normalized);
@@ -102,6 +107,7 @@ namespace winrt::CopyPointerNotifier_Settings::implementation
 
         HWND GetWindowHandle();
         void ShowError(hstring title, hstring message) noexcept;
+        winrt::fire_and_forget ResetAsync();
         winrt::fire_and_forget BackupAsync();
         winrt::fire_and_forget RestoreAsync();
         winrt::fire_and_forget EditRuleAsync(

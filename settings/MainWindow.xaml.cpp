@@ -71,7 +71,7 @@ namespace winrt::CopyPointerNotifier_Settings::implementation
         const double scale =
             static_cast<double>(dpi) / USER_DEFAULT_SCREEN_DPI;
         int widthPx = static_cast<int>(std::lround(390 * scale));
-        int heightPx = static_cast<int>(std::lround(920 * scale));
+        int heightPx = static_cast<int>(std::lround(760 * scale));
 
         auto displayArea = Microsoft::UI::Windowing::DisplayArea::GetFromWindowId(
             AppWindow().Id(),
