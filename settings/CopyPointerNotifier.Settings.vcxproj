@@ -83,7 +83,7 @@
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
-      <AdditionalDependencies>comdlg32.lib;windowsapp.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>comdlg32.lib;gdiplus.lib;windowsapp.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <GenerateDebugInformation Condition="'$(Configuration)'=='Release'">false</GenerateDebugInformation>
     </Link>
     <Midl>
@@ -97,6 +97,7 @@
     <ClInclude Include="MainWindow.xaml.h" />
     <ClInclude Include="MainPage.xaml.h" />
     <ClInclude Include="..\src\clipboard_classifier.hpp" />
+    <ClInclude Include="..\src\clipboard_rules.hpp" />
   </ItemGroup>
 
   <ItemGroup>
@@ -108,6 +109,9 @@
     <ClCompile Include="MainPage.xaml.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="..\src\clipboard_classifier.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="..\src\clipboard_rules.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
   </ItemGroup>

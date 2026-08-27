@@ -1,5 +1,6 @@
 #pragma once
 
+#include "clipboard_rules.hpp"
 #include "overlay_window.hpp"
 #include "tray_icon.hpp"
 
@@ -20,7 +21,7 @@ private:
     void HandleClipboardUpdate();
     void RetryClipboardRead();
     void ShowClipboardBadge();
-    void ShowGlyph(ClipboardContentType contentType);
+    void ShowGlyph(ClipboardIndicator indicator);
     void ToggleEnabled();
     void ToggleStartup();
     void OpenSettings();
@@ -31,6 +32,7 @@ private:
     HANDLE singleInstanceMutex_ = nullptr;
     HHOOK mouseHook_ = nullptr;
     OverlayWindow overlay_;
+    ClipboardRuleEngine ruleEngine_;
     TrayIcon trayIcon_;
     bool enabled_ = true;
     bool shuttingDown_ = false;

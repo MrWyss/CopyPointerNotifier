@@ -5,13 +5,16 @@
 
 #include <winrt/Windows.Foundation.h>
 #include <winrt/Windows.Foundation.Collections.h>
+#include <winrt/Windows.Data.Json.h>
 #include <winrt/Windows.ApplicationModel.h>
 #include <winrt/Windows.Storage.h>
 #include <winrt/Windows.Storage.Pickers.h>
 #include <winrt/Windows.System.h>
+#include <winrt/Windows.UI.Text.h>
 #include <winrt/Microsoft.UI.Composition.h>
 #include <winrt/Microsoft.UI.Windowing.h>
 #include <winrt/Microsoft.UI.Xaml.h>
+#include <winrt/Microsoft.UI.Xaml.Automation.h>
 #include <winrt/Microsoft.UI.Xaml.Controls.h>
 #include <winrt/Microsoft.UI.Xaml.Controls.Primitives.h>
 #include <winrt/Microsoft.UI.Xaml.Input.h>
@@ -30,14 +33,19 @@
 #include <commdlg.h>
 
 #include <Windows.h>
+#include <gdiplus.h>
 #include <appmodel.h>
 #include <wil/cppwinrt_helpers.h>
 
 #include <algorithm>
 #include <cmath>
+#include <cerrno>
 #include <filesystem>
 #include <fstream>
 #include <optional>
+#include <limits>
 #include <sstream>
 #include <string>
 #include <utility>
+#include <set>
+#include <vector>

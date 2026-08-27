@@ -22,6 +22,7 @@ constexpr UINT kClipboardRetryIntervalMs = 30;
 constexpr int kClipboardRetryLimit = 5;
 constexpr UINT kSettingsChangedMessage = WM_APP + 20;
 constexpr UINT kPreviewGlyphMessage = WM_APP + 21;
+constexpr UINT kPreviewCustomGlyphMessage = WM_APP + 22;
 
 HWND FindSettingsWindow() {
     HWND result = nullptr;
@@ -104,6 +105,7 @@ bool Application::Initialize(HINSTANCE instance) {
     }
 
     enabled_ = LoadApplicationEnabled();
+    ruleEngine_ = ClipboardRuleEngine(LoadClipboardRules());
     overlay_.SetGlyphPosition(LoadGlyphPosition());
     overlay_.SetGlyphScalePercent(LoadGlyphScalePercent());
     overlay_.SetAnimationStyle(LoadAnimationStyle());
@@ -220,11 +222,22 @@ LRESULT Application::HandleMessage(UINT message, WPARAM wParam, LPARAM lParam) {
             overlay_.SetAnimationStyle(LoadAnimationStyle());
             overlay_.SetAnimationSpeed(LoadAnimationSpeed());
             overlay_.SetVisibilityDuration(LoadIndicatorVisibilityDuration());
+            ruleEngine_ = ClipboardRuleEngine(LoadClipboardRules());
             overlay_.RefreshCursorSettings();
             return 0;
         case kPreviewGlyphMessage:
             if (wParam <= static_cast<WPARAM>(ClipboardContentType::Object)) {
-                ShowGlyph(static_cast<ClipboardContentType>(wParam));
+                ShowGlyph({
+                    static_cast<ClipboardContentType>(wParam),
+                    {}});
+            }
+            return 0;
+        case kPreviewCustomGlyphMessage:
+            for (const auto& rule : ruleEngine_.Rules()) {
+                if (rule.id == static_cast<std::uint64_t>(wParam)) {
+                    ShowGlyph({ClipboardContentType::Object, rule.glyph});
+                    break;
+                }
             }
             return 0;
         case WM_DESTROY:
@@ -274,16 +287,16 @@ void Application::ShowClipboardBadge() {
 
     KillTimer(window_, kClipboardRetryTimer);
     clipboardRetryCount_ = 0;
-    if (!result.contentType.has_value()) {
+    if (result.formats.empty()) {
         overlay_.Hide();
         return;
     }
 
-    ShowGlyph(*result.contentType);
+    ShowGlyph(ruleEngine_.Evaluate(result.formats));
 }
 
-void Application::ShowGlyph(ClipboardContentType contentType) {
-    overlay_.Show(contentType);
+void Application::ShowGlyph(ClipboardIndicator indicator) {
+    overlay_.Show(std::move(indicator));
     settledTimerApplied_ = false;
     SetTimer(window_, kAnimationTimer, kAnimationIntervalMs, nullptr);
     overlay_.Tick();

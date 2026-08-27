@@ -1,7 +1,7 @@
 #pragma once
 
 #include "animation_style.hpp"
-#include "clipboard_classifier.hpp"
+#include "clipboard_rules.hpp"
 
 #include <windows.h>
 
@@ -15,7 +15,7 @@ public:
     ~OverlayWindow();
 
     bool Initialize(HINSTANCE instance);
-    void Show(ClipboardContentType contentType);
+    void Show(ClipboardIndicator indicator);
     void Hide();
     bool Tick();
     bool IsSettled() const;
@@ -44,7 +44,7 @@ private:
     float CurrentWobbleAngle() const;
 
     HWND window_ = nullptr;
-    ClipboardContentType contentType_ = ClipboardContentType::Text;
+    ClipboardIndicator indicator_{ClipboardContentType::Text, {}};
     ULONGLONG animationStartedAt_ = 0;
     UINT dpi_ = 96;
     BYTE opacity_ = 0;

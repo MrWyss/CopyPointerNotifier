@@ -26,6 +26,20 @@ constexpr float kGlyphScaleNormalization = 1.1F;
 constexpr int kSupersamplingFactor = 4;
 constexpr ULONGLONG kCursorSettingsRefreshMs = 200;
 
+size_t UnicodeCharacterCount(std::wstring_view text) {
+    size_t count = 0;
+    for (size_t index = 0; index < text.size(); ++index) {
+        if (text[index] >= 0xD800 && text[index] <= 0xDBFF &&
+            index + 1 < text.size() &&
+            text[index + 1] >= 0xDC00 &&
+            text[index + 1] <= 0xDFFF) {
+            ++index;
+        }
+        ++count;
+    }
+    return count;
+}
+
 struct RgbColor {
     BYTE red;
     BYTE green;
@@ -269,8 +283,8 @@ bool OverlayWindow::Initialize(HINSTANCE instance) {
     return true;
 }
 
-void OverlayWindow::Show(ClipboardContentType contentType) {
-    contentType_ = contentType;
+void OverlayWindow::Show(ClipboardIndicator indicator) {
+    indicator_ = std::move(indicator);
     animationStartedAt_ = GetTickCount64();
     opacity_ = 255;
     settled_ = false;
@@ -596,21 +610,32 @@ bool OverlayWindow::RenderAtCursor(const CURSORINFO& cursorInfo) {
             return value * unit;
         };
 
-        if (contentType_ == ClipboardContentType::Text ||
-            contentType_ == ClipboardContentType::RichText) {
-            const wchar_t* label =
-                contentType_ == ClipboardContentType::Text ? L"T" : L"RT";
-            Gdiplus::FontFamily family(L"Segoe UI");
+        if (indicator_.IsCustom() ||
+            indicator_.contentType == ClipboardContentType::Text ||
+            indicator_.contentType == ClipboardContentType::RichText) {
+            const std::wstring label = indicator_.IsCustom()
+                ? indicator_.glyph
+                : indicator_.contentType == ClipboardContentType::Text
+                    ? L"T"
+                    : L"RT";
+            Gdiplus::FontFamily family(GlyphFontFamilyName(label));
             Gdiplus::StringFormat format;
             format.SetAlignment(Gdiplus::StringAlignmentCenter);
             format.SetLineAlignment(Gdiplus::StringAlignmentCenter);
+            format.SetFormatFlags(
+                format.GetFormatFlags() |
+                Gdiplus::StringFormatFlagsNoWrap);
             Gdiplus::GraphicsPath textPath;
+            const size_t characterCount = UnicodeCharacterCount(label);
             textPath.AddString(
-                label,
-                -1,
+                label.c_str(),
+                static_cast<INT>(label.size()),
                 &family,
                 Gdiplus::FontStyleBold,
-                coordinate(contentType_ == ClipboardContentType::Text ? 30.0F : 22.0F),
+                coordinate(
+                    characterCount == 1
+                        ? 30.0F
+                        : indicator_.IsCustom() ? 18.0F : 22.0F),
                 Gdiplus::RectF(
                     0.0F,
                     0.0F,
@@ -621,7 +646,7 @@ bool OverlayWindow::RenderAtCursor(const CURSORINFO& cursorInfo) {
             textOutline.SetLineJoin(Gdiplus::LineJoinRound);
             graphics.DrawPath(&textOutline, &textPath);
             graphics.FillPath(&iconBrush, &textPath);
-        } else if (contentType_ == ClipboardContentType::Image) {
+        } else if (indicator_.contentType == ClipboardContentType::Image) {
             graphics.DrawRectangle(
                 &outline,
                 coordinate(4),
@@ -655,7 +680,7 @@ bool OverlayWindow::RenderAtCursor(const CURSORINFO& cursorInfo) {
             };
             graphics.DrawLines(&outline, landscape, static_cast<int>(std::size(landscape)));
             graphics.DrawLines(&glyph, landscape, static_cast<int>(std::size(landscape)));
-        } else if (contentType_ == ClipboardContentType::Files) {
+        } else if (indicator_.contentType == ClipboardContentType::Files) {
             Gdiplus::PointF page[] = {
                 {coordinate(8), coordinate(3)},
                 {coordinate(25), coordinate(3)},

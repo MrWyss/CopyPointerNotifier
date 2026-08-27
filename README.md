@@ -43,13 +43,19 @@ Official prebuilt releases are currently available exclusively through the Micro
 - Uses an adaptive black or white outline so indicators remain visible over light and dark content.
 - Provides a system-themed WinUI 3 settings window with Mica and native title-bar controls.
 - Supports startup registration, JSON backup and restore, and live indicator previews.
+- Supports ordered clipboard-format rules with custom one- or two-character glyphs.
 - Can keep the latest indicator visible or hide it automatically after 1-60 seconds.
 - Uses WinUI string resources so additional interface languages can be added with `.resw` files.
 - Offers four animation styles: Fade & shrink, Camera shutter, Pulse, and Wobble.
 
 ## Clipboard types
 
-Formats are evaluated in the following priority order:
+User rules are evaluated first in their configured order. A custom rule matches
+when every **must have** format is present and every **must not have** format is
+absent. Rules can use standard Windows clipboard formats or named registered
+formats, and can be edited, reordered, disabled, or deleted.
+
+The following locked rules are always evaluated afterward:
 
 | Content | Indicator |
 | --- | --- |
@@ -57,7 +63,7 @@ Formats are evaluated in the following priority order:
 | Copied files | File indicator |
 | Rich text or HTML | `RT` |
 | Plain text | `T` |
-| Other registered formats | Object indicator |
+| Anything else | Object indicator |
 
 ## Usage
 
@@ -65,7 +71,8 @@ Formats are evaluated in the following priority order:
 2. Copy content with **Ctrl+C** or another application command.
 3. Click the notification-area icon to open **Settings**, or right-click it to enable or disable the indicator, configure startup, open **Settings**, or exit.
 
-The settings window provides:
+The settings window is divided into Appearance, Rules, and Advanced pages. It
+provides:
 
 - A two-dimensional pointer-relative position editor.
 - A normalized 0-100 indicator-size slider, defaulting to 50%.
@@ -73,7 +80,11 @@ The settings window provides:
 - A selectable animation style applied immediately to copy notifications and previews.
 - A 0-100 animation-speed control, with 50 preserving the standard timing.
 - A visibility mode that keeps the indicator until the next copy or hides it after 1-60 seconds.
-- Buttons that preview every supported indicator through the real overlay.
+- A Test menu that previews every built-in indicator through the real overlay.
+- A rule editor that captures the current clipboard's persistable formats as
+  initial required conditions.
+- Drag-and-drop ordering, live custom-glyph tests, and a separate locked
+  built-in rule list with the same indicator artwork used by the overlay.
 - Reset, versioned JSON backup, and restore actions.
 
 The default pointer-relative position is **X 30 / Y 50**. Size 50 preserves the previous 55% visual size; values above 50 expand progressively so 100 retains the former maximum.
@@ -93,7 +104,10 @@ The settings process launches only when requested and communicates with the nati
 HKCU\Software\MrWyss\CopyPointerNotifier
 ```
 
-Backups use a versioned JSON document split into app-level and indicator settings so future options can be added without changing the backup location or workflow.
+Custom rules are stored with stable standard-format IDs and registered-format
+names so they continue to work after Windows assigns new runtime IDs. Backups
+use a versioned JSON document containing app, indicator, and custom-rule
+settings. Version 1 backups remain supported and restore with no custom rules.
 
 ### Localization
 

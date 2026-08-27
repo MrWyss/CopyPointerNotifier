@@ -1,5 +1,6 @@
 #pragma once
 #include "MainPage.g.h"
+#include "../src/clipboard_rules.hpp"
 
 namespace winrt::CopyPointerNotifier_Settings::implementation
 {
@@ -25,6 +26,13 @@ namespace winrt::CopyPointerNotifier_Settings::implementation
         void PointerSettings_Click(Windows::Foundation::IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
         void Backup_Click(Windows::Foundation::IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
         void Restore_Click(Windows::Foundation::IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void SettingsSelectorBar_SelectionChanged(
+            Microsoft::UI::Xaml::Controls::SelectorBar const&,
+            Microsoft::UI::Xaml::Controls::SelectorBarSelectionChangedEventArgs const&);
+        void AddRule_Click(Windows::Foundation::IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
+        void RulesListView_DragItemsCompleted(
+            Microsoft::UI::Xaml::Controls::ListViewBase const&,
+            Microsoft::UI::Xaml::Controls::DragItemsCompletedEventArgs const&);
 
     private:
         static constexpr int MinimumPosition = -125;
@@ -44,6 +52,7 @@ namespace winrt::CopyPointerNotifier_Settings::implementation
         static constexpr wchar_t NativeWindowClass[] = L"CopyPointerNotifier.MessageWindow";
         static constexpr uint32_t SettingsChangedMessage = 0x8014; // WM_APP + 20
         static constexpr uint32_t PreviewGlyphMessage = 0x8015;   // WM_APP + 21
+        static constexpr uint32_t PreviewCustomGlyphMessage = 0x8016; // WM_APP + 22
 
         Microsoft::Windows::ApplicationModel::Resources::ResourceLoader m_resources;
         bool m_loaded{ false };
@@ -54,6 +63,7 @@ namespace winrt::CopyPointerNotifier_Settings::implementation
         int m_yPercent{ DefaultY };
         std::wstring m_clipboardDiagnosticText;
         Microsoft::UI::Xaml::DispatcherTimer m_clipboardStatusTimer{ nullptr };
+        std::vector<ClipboardRule> m_rules;
 
         struct BackupSettings
         {
@@ -66,6 +76,7 @@ namespace winrt::CopyPointerNotifier_Settings::implementation
             int animationSpeed;
             int visibilityMode;
             int visibilityDurationSeconds;
+            std::vector<ClipboardRule> rules;
         };
 
         void UpdatePosition(Windows::Foundation::Point point);
@@ -78,6 +89,12 @@ namespace winrt::CopyPointerNotifier_Settings::implementation
             Windows::Foundation::IInspectable const&);
         void SaveSettings();
         void NotifyNative(uint32_t message, uintptr_t value = 0);
+        void RefreshRulesList();
+        bool PersistRules(std::vector<ClipboardRule> rules);
+        std::uint64_t GenerateRuleId() const;
+        void ToggleRule(std::size_t index);
+        void DeleteRule(std::size_t index);
+        void TestRule(std::size_t index);
 
         static int ReadDword(HKEY key, const wchar_t* name, int fallback);
         static int ToPercent(double normalized);
@@ -87,6 +104,10 @@ namespace winrt::CopyPointerNotifier_Settings::implementation
         void ShowError(hstring title, hstring message) noexcept;
         winrt::fire_and_forget BackupAsync();
         winrt::fire_and_forget RestoreAsync();
+        winrt::fire_and_forget EditRuleAsync(
+            std::optional<std::size_t> index,
+            std::vector<ClipboardFormatIdentity> formats = {},
+            std::size_t omittedFormats = 0);
         Windows::Foundation::IAsyncOperation<bool> ReadStartWithWindowsAsync();
         Windows::Foundation::IAsyncAction WriteStartWithWindowsAsync(bool enabled);
 

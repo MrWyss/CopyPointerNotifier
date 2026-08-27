@@ -7,6 +7,9 @@
   <data name="SettingsWindow.Title" xml:space="preserve"><value>Copy Pointer Notifier Settings</value></data>
   <data name="SettingsTitleBar.Title" xml:space="preserve"><value>Copy Pointer Notifier Settings</value></data>
   <data name="SettingsTitle" xml:space="preserve"><value>Copy Pointer Notifier Settings</value></data>
+  <data name="AppearanceSelector.Text" xml:space="preserve"><value>Appearance</value></data>
+  <data name="RulesSelector.Text" xml:space="preserve"><value>Rules</value></data>
+  <data name="AdvancedSelector.Text" xml:space="preserve"><value>Advanced</value></data>
   <data name="PositionHeader.Text" xml:space="preserve"><value>Position</value></data>
   <data name="SizeHeader.Text" xml:space="preserve"><value>Size</value></data>
   <data name="PointerSettingsButton.Content" xml:space="preserve"><value>Pointer size and color settings</value></data>
@@ -21,6 +24,12 @@
   <data name="VisibilityForDuration.Content" xml:space="preserve"><value>For a set time</value></data>
   <data name="VisibilityDurationHeader.Text" xml:space="preserve"><value>Visible for</value></data>
   <data name="TestIndicatorsHeader.Text" xml:space="preserve"><value>Test indicators</value></data>
+  <data name="TestIndicatorButton.Content" xml:space="preserve"><value>Test indicator</value></data>
+  <data name="TestTextMenuItem.Text" xml:space="preserve"><value>Text</value></data>
+  <data name="TestRichTextMenuItem.Text" xml:space="preserve"><value>RT</value></data>
+  <data name="TestImageMenuItem.Text" xml:space="preserve"><value>Image</value></data>
+  <data name="TestFilesMenuItem.Text" xml:space="preserve"><value>Files</value></data>
+  <data name="TestObjectMenuItem.Text" xml:space="preserve"><value>Object</value></data>
   <data name="TextIndicatorButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Text</value></data>
   <data name="RichTextIndicatorButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Rich text</value></data>
   <data name="ImageIndicatorButton.[using:Microsoft.UI.Xaml.Automation]AutomationProperties.Name" xml:space="preserve"><value>Image</value></data>
@@ -46,6 +55,48 @@
   <data name="ClipboardUnavailableDescription" xml:space="preserve"><value>The clipboard is temporarily in use. Waiting to retry...</value></data>
   <data name="ClipboardIndicatorNone" xml:space="preserve"><value>None</value></data>
   <data name="ClipboardFormatsEmpty" xml:space="preserve"><value>No clipboard formats are available.</value></data>
+  <data name="RulesDescription.Text" xml:space="preserve"><value>Custom rules are checked in order before the built-in indicators.</value></data>
+  <data name="AddRuleButton.Content" xml:space="preserve"><value>Add from current clipboard</value></data>
+  <data name="CustomRulesHeader.Text" xml:space="preserve"><value>Custom rules</value></data>
+  <data name="BuiltInRulesHeader.Text" xml:space="preserve"><value>Built-in rules</value></data>
+  <data name="RuleEnabledStatus" xml:space="preserve"><value>Enabled</value></data>
+  <data name="RuleDisabledStatus" xml:space="preserve"><value>Disabled</value></data>
+  <data name="RuleBuiltInStatus" xml:space="preserve"><value>Enabled · Built-in (locked)</value></data>
+  <data name="BuiltInImageName" xml:space="preserve"><value>Image</value></data>
+  <data name="BuiltInFilesName" xml:space="preserve"><value>Files</value></data>
+  <data name="BuiltInRichTextName" xml:space="preserve"><value>Rich text</value></data>
+  <data name="BuiltInTextName" xml:space="preserve"><value>Text</value></data>
+  <data name="BuiltInObjectName" xml:space="preserve"><value>Object</value></data>
+  <data name="RuleActionsAutomationName" xml:space="preserve"><value>Rule actions</value></data>
+  <data name="RuleEditAction" xml:space="preserve"><value>Edit</value></data>
+  <data name="RuleTestAction" xml:space="preserve"><value>Test indicator</value></data>
+  <data name="RuleEnableAction" xml:space="preserve"><value>Enable</value></data>
+  <data name="RuleDisableAction" xml:space="preserve"><value>Disable</value></data>
+  <data name="RuleDeleteAction" xml:space="preserve"><value>Delete</value></data>
+  <data name="RuleAddDialogTitle" xml:space="preserve"><value>Add clipboard rule</value></data>
+  <data name="RuleEditDialogTitle" xml:space="preserve"><value>Edit clipboard rule</value></data>
+  <data name="RuleSaveButton" xml:space="preserve"><value>Save</value></data>
+  <data name="CancelButton" xml:space="preserve"><value>Cancel</value></data>
+  <data name="RuleNameLabel" xml:space="preserve"><value>Name</value></data>
+  <data name="RuleGlyphLabel" xml:space="preserve"><value>Indicator glyph</value></data>
+  <data name="RuleGlyphDescription" xml:space="preserve"><value>Enter one emoji or up to two other Unicode characters.</value></data>
+  <data name="RuleFormatsLabel" xml:space="preserve"><value>Clipboard formats</value></data>
+  <data name="RuleMustHaveChoice" xml:space="preserve"><value>Must have</value></data>
+  <data name="RuleMustNotHaveChoice" xml:space="preserve"><value>Must not have</value></data>
+  <data name="RuleRemoveChoice" xml:space="preserve"><value>Remove</value></data>
+  <data name="RuleUnsupportedFormatsOmitted" xml:space="preserve"><value>{0} unsupported clipboard format(s) were omitted because they cannot be identified reliably.</value></data>
+  <data name="RuleNameRequiredError" xml:space="preserve"><value>Enter a rule name.</value></data>
+  <data name="RuleGlyphInvalidError" xml:space="preserve"><value>Enter one emoji or up to two other valid Unicode characters.</value></data>
+  <data name="RuleConditionsRequiredError" xml:space="preserve"><value>Keep at least one clipboard format.</value></data>
+  <data name="RuleInvalidError" xml:space="preserve"><value>The rule contains invalid values.</value></data>
+  <data name="RuleEditorFailedTitle" xml:space="preserve"><value>Rule editor failed</value></data>
+  <data name="RuleClipboardUnavailableTitle" xml:space="preserve"><value>Clipboard unavailable</value></data>
+  <data name="RuleClipboardUnavailableMessage" xml:space="preserve"><value>The clipboard is temporarily in use. Try again.</value></data>
+  <data name="RuleNoFormatsTitle" xml:space="preserve"><value>No supported formats</value></data>
+  <data name="RuleNoFormatsMessage" xml:space="preserve"><value>The current clipboard content has no formats that can be used in a rule.</value></data>
+  <data name="RuleSaveFailedTitle" xml:space="preserve"><value>Could not save rules</value></data>
+  <data name="RuleSaveFailedMessage" xml:space="preserve"><value>The clipboard rules could not be saved. No changes were applied.</value></data>
+  <data name="RuleRollbackFailedMessage" xml:space="preserve"><value>Startup settings could not be restored, and the previous clipboard rules could not be recovered.</value></data>
   <data name="BackupRestoreHeader.Text" xml:space="preserve"><value>Backup and restore</value></data>
   <data name="BackupRestoreDescription.Text" xml:space="preserve"><value>Back up your settings to a JSON file, or restore them from a previous backup.</value></data>
   <data name="BackupButton.Content" xml:space="preserve"><value>Back up...</value></data>
@@ -58,6 +109,8 @@
   <data name="BackupEmptyError" xml:space="preserve"><value>The backup file is empty.</value></data>
   <data name="UnsupportedBackupVersionError" xml:space="preserve"><value>Unsupported backup version {0}.</value></data>
   <data name="BackupMissingSettingsError" xml:space="preserve"><value>The backup is missing required settings.</value></data>
+  <data name="BackupInvalidJsonError" xml:space="preserve"><value>The backup is malformed or is missing required settings.</value></data>
+  <data name="BackupInvalidRulesError" xml:space="preserve"><value>The backup contains invalid clipboard rules.</value></data>
   <data name="BackupInvalidIndicatorError" xml:space="preserve"><value>The backup contains invalid indicator values.</value></data>
   <data name="BackupInvalidAnimationError" xml:space="preserve"><value>The backup contains an invalid animation.</value></data>
   <data name="BackupInvalidAnimationSpeedError" xml:space="preserve"><value>The backup contains an invalid animation speed.</value></data>

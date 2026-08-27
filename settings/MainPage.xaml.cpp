@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "MainPage.xaml.h"
 #include "../src/clipboard_classifier.hpp"
+#include "../src/clipboard_rules.hpp"
 #if __has_include("MainPage.g.cpp")
 #include "MainPage.g.cpp"
 #endif
@@ -12,6 +13,7 @@ using namespace winrt;
 using namespace Windows::Foundation;
 using namespace Windows::Storage;
 using namespace Windows::Storage::Pickers;
+using namespace Windows::Data::Json;
 using namespace Microsoft::UI::Xaml;
 using namespace Microsoft::UI::Xaml::Controls;
 using namespace Microsoft::UI::Xaml::Controls::Primitives;
@@ -118,6 +120,197 @@ namespace winrt::CopyPointerNotifier_Settings::implementation
             }
             return std::nullopt;
         }
+
+        class GdiplusSession
+        {
+        public:
+            GdiplusSession()
+            {
+                Gdiplus::GdiplusStartupInput input;
+                check_hresult(Gdiplus::GdiplusStartup(
+                    &m_token, &input, nullptr) == Gdiplus::Ok
+                        ? S_OK
+                        : E_FAIL);
+            }
+
+            ~GdiplusSession()
+            {
+                if (m_token != 0)
+                {
+                    Gdiplus::GdiplusShutdown(m_token);
+                }
+            }
+
+        private:
+            ULONG_PTR m_token = 0;
+        };
+
+        FrameworkElement CreateGlyphVisual(
+            std::wstring_view glyph,
+            const wchar_t* brushResource = L"TextFillColorPrimaryBrush")
+        {
+            static GdiplusSession gdiplus;
+            constexpr float visualSize = 24.0F;
+            constexpr float padding = 1.0F;
+
+            Gdiplus::FontFamily family(GlyphFontFamilyName(glyph));
+            Gdiplus::StringFormat format;
+            format.SetFormatFlags(Gdiplus::StringFormatFlagsNoWrap);
+            Gdiplus::GraphicsPath outline;
+            const auto status = outline.AddString(
+                glyph.data(),
+                static_cast<INT>(glyph.size()),
+                &family,
+                Gdiplus::FontStyleBold,
+                28.0F,
+                Gdiplus::PointF{},
+                &format);
+            Gdiplus::RectF bounds;
+            if (status != Gdiplus::Ok ||
+                outline.GetBounds(&bounds) != Gdiplus::Ok ||
+                bounds.Width <= 0.0F ||
+                bounds.Height <= 0.0F)
+            {
+                TextBlock fallback;
+                fallback.Text(hstring{ glyph });
+                fallback.IsColorFontEnabled(true);
+                fallback.FontSize(20);
+                fallback.Foreground(
+                    Application::Current().Resources().Lookup(
+                        box_value(brushResource))
+                        .as<Media::Brush>());
+                fallback.Width(30);
+                return fallback;
+            }
+
+            const INT pointCount = outline.GetPointCount();
+            std::vector<Gdiplus::PointF> points(pointCount);
+            std::vector<BYTE> types(pointCount);
+            if (outline.GetPathPoints(points.data(), pointCount) !=
+                    Gdiplus::Ok ||
+                outline.GetPathTypes(types.data(), pointCount) !=
+                    Gdiplus::Ok)
+            {
+                throw hresult_error(E_FAIL, L"The glyph outline could not be read.");
+            }
+
+            const float scale = (std::min)(
+                (visualSize - padding * 2.0F) / bounds.Width,
+                (visualSize - padding * 2.0F) / bounds.Height);
+            const float offsetX =
+                (visualSize - bounds.Width * scale) / 2.0F;
+            const float offsetY =
+                (visualSize - bounds.Height * scale) / 2.0F;
+            const auto transform = [&](const Gdiplus::PointF& point)
+            {
+                return Point{
+                    (point.X - bounds.X) * scale + offsetX,
+                    (point.Y - bounds.Y) * scale + offsetY };
+            };
+
+            Media::PathGeometry geometry;
+            Media::PathFigure figure{ nullptr };
+            for (INT index = 0; index < pointCount; ++index)
+            {
+                const BYTE type =
+                    types[index] & Gdiplus::PathPointTypePathTypeMask;
+                const bool closesFigure =
+                    (types[index] &
+                     Gdiplus::PathPointTypeCloseSubpath) != 0;
+                if (type == Gdiplus::PathPointTypeStart)
+                {
+                    figure = Media::PathFigure{};
+                    figure.StartPoint(transform(points[index]));
+                    figure.IsFilled(true);
+                    geometry.Figures().Append(figure);
+                }
+                else if (type == Gdiplus::PathPointTypeLine && figure)
+                {
+                    Media::LineSegment segment;
+                    segment.Point(transform(points[index]));
+                    figure.Segments().Append(segment);
+                }
+                else if (type == Gdiplus::PathPointTypeBezier &&
+                         figure &&
+                         index + 2 < pointCount)
+                {
+                    Media::BezierSegment segment;
+                    segment.Point1(transform(points[index]));
+                    segment.Point2(transform(points[index + 1]));
+                    segment.Point3(transform(points[index + 2]));
+                    figure.Segments().Append(segment);
+                    if ((types[index + 2] &
+                         Gdiplus::PathPointTypeCloseSubpath) != 0)
+                    {
+                        figure.IsClosed(true);
+                    }
+                    index += 2;
+                    continue;
+                }
+                if (closesFigure && figure)
+                {
+                    figure.IsClosed(true);
+                }
+            }
+
+            Shapes::Path preview;
+            preview.Data(geometry);
+            preview.Fill(
+                Application::Current().Resources().Lookup(
+                    box_value(brushResource))
+                    .as<Media::Brush>());
+            preview.Width(30);
+            preview.Height(visualSize);
+            preview.HorizontalAlignment(HorizontalAlignment::Left);
+            preview.VerticalAlignment(VerticalAlignment::Center);
+            return preview;
+        }
+
+        FrameworkElement CreateBuiltInVisual(ClipboardContentType contentType)
+        {
+            if (contentType == ClipboardContentType::Text)
+            {
+                return CreateGlyphVisual(L"T");
+            }
+            if (contentType == ClipboardContentType::RichText)
+            {
+                return CreateGlyphVisual(L"RT");
+            }
+
+            const wchar_t* markup = nullptr;
+            switch (contentType)
+            {
+                case ClipboardContentType::Image:
+                    markup = LR"(
+<Viewbox xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" Width="24" Height="24" HorizontalAlignment="Left">
+  <Canvas Width="24" Height="24">
+    <Rectangle Canvas.Left="2" Canvas.Top="3" Width="20" Height="18" RadiusX="1" RadiusY="1" Stroke="{ThemeResource TextFillColorPrimaryBrush}" StrokeThickness="1.8" />
+    <Ellipse Canvas.Left="15" Canvas.Top="6" Width="3" Height="3" Stroke="{ThemeResource TextFillColorPrimaryBrush}" StrokeThickness="1.8" />
+    <Path Data="M 3,20 L 9,12 L 13,16 L 17,12 L 22,19" Stroke="{ThemeResource TextFillColorPrimaryBrush}" StrokeEndLineCap="Round" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeThickness="1.8" />
+  </Canvas>
+</Viewbox>)";
+                    break;
+                case ClipboardContentType::Files:
+                    markup = LR"(
+<Viewbox xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" Width="24" Height="24" HorizontalAlignment="Left">
+  <Canvas Width="24" Height="24">
+    <Path Data="M 5,2 L 15,2 L 21,8 L 21,22 L 5,22 Z M 15,2 L 15,8 L 21,8" Stroke="{ThemeResource TextFillColorPrimaryBrush}" StrokeEndLineCap="Round" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeThickness="1.8" />
+  </Canvas>
+</Viewbox>)";
+                    break;
+                case ClipboardContentType::Object:
+                    markup = LR"(
+<Viewbox xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" Width="24" Height="24" HorizontalAlignment="Left">
+  <Canvas Width="24" Height="24">
+    <Path Data="M 12,2 L 22,7.5 L 12,13 L 2,7.5 Z M 2,7.5 L 2,17 L 12,22 L 22,17 L 22,7.5 M 12,13 L 12,22" Stroke="{ThemeResource TextFillColorPrimaryBrush}" StrokeEndLineCap="Round" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeThickness="1.8" />
+  </Canvas>
+</Viewbox>)";
+                    break;
+                default:
+                    return CreateGlyphVisual(L"?");
+            }
+            return Markup::XamlReader::Load(markup).as<FrameworkElement>();
+        }
     }
 
     MainPage::MainPage()
@@ -202,6 +395,8 @@ namespace winrt::CopyPointerNotifier_Settings::implementation
         if (key) RegCloseKey(key);
 
         m_loaded = true;
+        m_rules = LoadClipboardRules();
+        RefreshRulesList();
         UpdatePositionMarker();
         UpdateLabels();
         m_lastClipboardSequence = 0;
@@ -214,6 +409,24 @@ namespace winrt::CopyPointerNotifier_Settings::implementation
         [[maybe_unused]] RoutedEventArgs const&)
     {
         m_clipboardStatusTimer.Stop();
+    }
+
+    void MainPage::SettingsSelectorBar_SelectionChanged(
+        SelectorBar const& sender,
+        [[maybe_unused]] SelectorBarSelectionChangedEventArgs const&)
+    {
+        if (!AppearancePage() || !RulesPage() || !AdvancedPage())
+        {
+            return;
+        }
+        const auto selected = sender.SelectedItem();
+        AppearancePage().Visibility(
+            selected == AppearanceSelector() ? Visibility::Visible : Visibility::Collapsed);
+        RulesPage().Visibility(
+            selected == RulesSelector() ? Visibility::Visible : Visibility::Collapsed);
+        AdvancedPage().Visibility(
+            selected == AdvancedSelector() ? Visibility::Visible : Visibility::Collapsed);
+        SettingsScrollViewer().ChangeView(nullptr, 0.0, nullptr);
     }
 
     // --- Position pad ---
@@ -308,6 +521,613 @@ namespace winrt::CopyPointerNotifier_Settings::implementation
         UpdateLabels();
     }
 
+    void MainPage::AddRule_Click(
+        [[maybe_unused]] IInspectable const&,
+        [[maybe_unused]] RoutedEventArgs const&)
+    {
+        const ClipboardReadResult result =
+            ReadClipboardContentType(GetWindowHandle());
+        if (!result.clipboardOpened)
+        {
+            ShowError(
+                m_resources.GetString(L"RuleClipboardUnavailableTitle"),
+                m_resources.GetString(L"RuleClipboardUnavailableMessage"));
+            return;
+        }
+
+        std::vector<ClipboardFormatIdentity> formats;
+        std::set<std::pair<UINT, std::wstring>> seen;
+        std::size_t omitted = 0;
+        for (const UINT format : result.formats)
+        {
+            auto identity = IdentifyClipboardFormat(format);
+            if (!identity)
+            {
+                ++omitted;
+                continue;
+            }
+            if (seen.emplace(
+                    identity->standardFormat,
+                    identity->registeredName).second)
+            {
+                formats.push_back(std::move(*identity));
+            }
+        }
+        if (formats.empty())
+        {
+            ShowError(
+                m_resources.GetString(L"RuleNoFormatsTitle"),
+                m_resources.GetString(L"RuleNoFormatsMessage"));
+            return;
+        }
+        EditRuleAsync(std::nullopt, std::move(formats), omitted);
+    }
+
+    std::uint64_t MainPage::GenerateRuleId() const
+    {
+        FILETIME time{};
+        GetSystemTimeAsFileTime(&time);
+        LARGE_INTEGER counter{};
+        QueryPerformanceCounter(&counter);
+        std::uint64_t id =
+            (static_cast<std::uint64_t>(time.dwHighDateTime) << 32) |
+            time.dwLowDateTime;
+        id ^= static_cast<std::uint64_t>(counter.QuadPart);
+        if (id == 0)
+        {
+            id = 1;
+        }
+        while (std::ranges::any_of(
+            m_rules, [id](const ClipboardRule& rule) { return rule.id == id; }))
+        {
+            ++id;
+            if (id == 0)
+            {
+                ++id;
+            }
+        }
+        return id;
+    }
+
+    bool MainPage::PersistRules(std::vector<ClipboardRule> rules)
+    {
+        if (!SaveClipboardRules(rules))
+        {
+            ShowError(
+                m_resources.GetString(L"RuleSaveFailedTitle"),
+                m_resources.GetString(L"RuleSaveFailedMessage"));
+            return false;
+        }
+        m_rules = std::move(rules);
+        RefreshRulesList();
+        NotifyNative(SettingsChangedMessage);
+        m_lastClipboardSequence = 0;
+        UpdateClipboardStatus();
+        return true;
+    }
+
+    void MainPage::ToggleRule(std::size_t index)
+    {
+        if (index >= m_rules.size())
+        {
+            return;
+        }
+        auto rules = m_rules;
+        rules[index].enabled = !rules[index].enabled;
+        PersistRules(std::move(rules));
+    }
+
+    void MainPage::DeleteRule(std::size_t index)
+    {
+        if (index >= m_rules.size())
+        {
+            return;
+        }
+        auto rules = m_rules;
+        rules.erase(rules.begin() + static_cast<std::ptrdiff_t>(index));
+        PersistRules(std::move(rules));
+    }
+
+    void MainPage::TestRule(std::size_t index)
+    {
+        if (index < m_rules.size())
+        {
+            NotifyNative(
+                PreviewCustomGlyphMessage,
+                static_cast<std::uintptr_t>(m_rules[index].id));
+        }
+    }
+
+    void MainPage::RulesListView_DragItemsCompleted(
+        [[maybe_unused]] ListViewBase const& sender,
+        [[maybe_unused]] DragItemsCompletedEventArgs const& args)
+    {
+        std::vector<ClipboardRule> reordered;
+        reordered.reserve(m_rules.size());
+        for (const auto& value : RulesListView().Items())
+        {
+            const auto item = value.try_as<ListViewItem>();
+            if (!item || !item.Tag())
+            {
+                return;
+            }
+            const auto id = unbox_value<std::uint64_t>(item.Tag());
+            const auto rule = std::ranges::find_if(
+                m_rules,
+                [id](const ClipboardRule& candidate)
+                {
+                    return candidate.id == id;
+                });
+            if (rule == m_rules.end())
+            {
+                return;
+            }
+            reordered.push_back(*rule);
+        }
+        bool changed = reordered.size() == m_rules.size();
+        if (changed)
+        {
+            changed = !std::ranges::equal(
+                reordered,
+                m_rules,
+                [](const ClipboardRule& left, const ClipboardRule& right)
+                {
+                    return left.id == right.id;
+                });
+        }
+        if (changed)
+        {
+            if (!PersistRules(std::move(reordered)))
+            {
+                RefreshRulesList();
+            }
+        }
+    }
+
+    void MainPage::RefreshRulesList()
+    {
+        if (!RulesListView() || !BuiltInRulesListView())
+        {
+            return;
+        }
+        RulesListView().Items().Clear();
+        BuiltInRulesListView().Items().Clear();
+        auto weak = get_weak();
+
+        const auto appendRow = [&](ListView const& target,
+                                   FrameworkElement const& glyphVisual,
+                                   hstring const& name,
+                                   hstring const& status,
+                                   std::optional<std::size_t> index)
+        {
+            Grid row;
+            row.ColumnSpacing(10);
+            row.Padding(Thickness{ 4, 8, 4, 8 });
+            row.ColumnDefinitions().Append(ColumnDefinition{});
+            row.ColumnDefinitions().GetAt(0).Width(GridLengthHelper::FromPixels(42));
+            row.ColumnDefinitions().Append(ColumnDefinition{});
+            row.ColumnDefinitions().GetAt(1).Width(GridLengthHelper::FromValueAndType(
+                1, GridUnitType::Star));
+            row.ColumnDefinitions().Append(ColumnDefinition{});
+            row.ColumnDefinitions().GetAt(2).Width(GridLengthHelper::Auto());
+
+            row.Children().Append(glyphVisual);
+
+            StackPanel labels;
+            labels.Spacing(2);
+            TextBlock nameText;
+            nameText.Text(name);
+            nameText.FontWeight(Windows::UI::Text::FontWeights::SemiBold());
+            nameText.TextTrimming(TextTrimming::CharacterEllipsis);
+            labels.Children().Append(nameText);
+            TextBlock statusText;
+            statusText.Text(status);
+            statusText.FontSize(12);
+            statusText.Foreground(
+                Application::Current().Resources().Lookup(
+                    box_value(L"TextFillColorSecondaryBrush"))
+                    .as<Media::Brush>());
+            labels.Children().Append(statusText);
+            Grid::SetColumn(labels, 1);
+            row.Children().Append(labels);
+
+            if (index)
+            {
+                Button actions;
+                actions.Content(box_value(L"\u2026"));
+                actions.VerticalAlignment(VerticalAlignment::Center);
+                Automation::AutomationProperties::SetName(
+                    actions, m_resources.GetString(L"RuleActionsAutomationName"));
+
+                MenuFlyout menu;
+                MenuFlyoutItem edit;
+                edit.Text(m_resources.GetString(L"RuleEditAction"));
+                edit.Click([weak, value = *index](
+                    [[maybe_unused]] IInspectable const&,
+                    [[maybe_unused]] RoutedEventArgs const&)
+                {
+                    if (auto self = weak.get())
+                    {
+                        self->EditRuleAsync(value);
+                    }
+                });
+                menu.Items().Append(edit);
+
+                MenuFlyoutItem test;
+                test.Text(m_resources.GetString(L"RuleTestAction"));
+                test.Click([weak, value = *index](
+                    [[maybe_unused]] IInspectable const&,
+                    [[maybe_unused]] RoutedEventArgs const&)
+                {
+                    if (auto self = weak.get())
+                    {
+                        self->TestRule(value);
+                    }
+                });
+                menu.Items().Append(test);
+
+                MenuFlyoutItem toggle;
+                toggle.Text(m_rules[*index].enabled
+                    ? m_resources.GetString(L"RuleDisableAction")
+                    : m_resources.GetString(L"RuleEnableAction"));
+                toggle.Click([weak, value = *index](
+                    [[maybe_unused]] IInspectable const&,
+                    [[maybe_unused]] RoutedEventArgs const&)
+                {
+                    if (auto self = weak.get())
+                    {
+                        self->ToggleRule(value);
+                    }
+                });
+                menu.Items().Append(toggle);
+
+                MenuFlyoutItem remove;
+                remove.Text(m_resources.GetString(L"RuleDeleteAction"));
+                remove.Click([weak, value = *index](
+                    [[maybe_unused]] IInspectable const&,
+                    [[maybe_unused]] RoutedEventArgs const&)
+                {
+                    if (auto self = weak.get())
+                    {
+                        self->DeleteRule(value);
+                    }
+                });
+                menu.Items().Append(remove);
+
+                row.ContextFlyout(menu);
+                actions.Flyout(menu);
+                Grid::SetColumn(actions, 2);
+                row.Children().Append(actions);
+            }
+
+            ListViewItem item;
+            item.HorizontalContentAlignment(HorizontalAlignment::Stretch);
+            item.Content(row);
+            if (index)
+            {
+                item.Tag(box_value(m_rules[*index].id));
+                item.DoubleTapped([weak, value = *index](
+                    [[maybe_unused]] IInspectable const&,
+                    DoubleTappedRoutedEventArgs const& args)
+                {
+                    if (auto self = weak.get())
+                    {
+                        self->TestRule(value);
+                        args.Handled(true);
+                    }
+                });
+            }
+            target.Items().Append(item);
+        };
+
+        for (std::size_t index = 0; index < m_rules.size(); ++index)
+        {
+            const auto& rule = m_rules[index];
+            appendRow(
+                RulesListView(),
+                CreateGlyphVisual(rule.glyph),
+                hstring{ rule.name },
+                rule.enabled
+                    ? m_resources.GetString(L"RuleEnabledStatus")
+                    : m_resources.GetString(L"RuleDisabledStatus"),
+                index);
+        }
+
+        const hstring locked = m_resources.GetString(L"RuleBuiltInStatus");
+        appendRow(BuiltInRulesListView(), CreateBuiltInVisual(ClipboardContentType::Image), m_resources.GetString(L"BuiltInImageName"), locked, std::nullopt);
+        appendRow(BuiltInRulesListView(), CreateBuiltInVisual(ClipboardContentType::Files), m_resources.GetString(L"BuiltInFilesName"), locked, std::nullopt);
+        appendRow(BuiltInRulesListView(), CreateBuiltInVisual(ClipboardContentType::RichText), m_resources.GetString(L"BuiltInRichTextName"), locked, std::nullopt);
+        appendRow(BuiltInRulesListView(), CreateBuiltInVisual(ClipboardContentType::Text), m_resources.GetString(L"BuiltInTextName"), locked, std::nullopt);
+        appendRow(BuiltInRulesListView(), CreateBuiltInVisual(ClipboardContentType::Object), m_resources.GetString(L"BuiltInObjectName"), locked, std::nullopt);
+    }
+
+    winrt::fire_and_forget MainPage::EditRuleAsync(
+        std::optional<std::size_t> index,
+        std::vector<ClipboardFormatIdentity> formats,
+        std::size_t omittedFormats)
+    {
+        auto strong = get_strong();
+        try
+        {
+            ClipboardRule initial;
+            if (index)
+            {
+                if (*index >= m_rules.size())
+                {
+                    co_return;
+                }
+                initial = m_rules[*index];
+                formats.reserve(initial.conditions.size());
+                for (const auto& condition : initial.conditions)
+                {
+                    formats.push_back(condition.format);
+                }
+            }
+            else
+            {
+                initial.id = GenerateRuleId();
+                initial.enabled = true;
+                for (const auto& format : formats)
+                {
+                    initial.conditions.push_back({ format, true });
+                }
+            }
+
+            ContentDialog dialog;
+            dialog.XamlRoot(XamlRoot());
+            dialog.Title(box_value(index
+                ? m_resources.GetString(L"RuleEditDialogTitle")
+                : m_resources.GetString(L"RuleAddDialogTitle")));
+            dialog.PrimaryButtonText(m_resources.GetString(L"RuleSaveButton"));
+            dialog.CloseButtonText(m_resources.GetString(L"CancelButton"));
+            dialog.DefaultButton(ContentDialogButton::Primary);
+
+            StackPanel panel;
+            panel.Spacing(10);
+
+            TextBox nameBox;
+            nameBox.Header(box_value(m_resources.GetString(L"RuleNameLabel")));
+            nameBox.Text(hstring{ initial.name });
+            panel.Children().Append(nameBox);
+
+            TextBox glyphBox;
+            glyphBox.Header(box_value(m_resources.GetString(L"RuleGlyphLabel")));
+            glyphBox.MaxLength(16);
+            glyphBox.IsColorFontEnabled(true);
+            glyphBox.Width(200);
+            glyphBox.HorizontalAlignment(HorizontalAlignment::Left);
+            glyphBox.Text(hstring{ initial.glyph });
+            glyphBox.BeforeTextChanging(
+                [](
+                    [[maybe_unused]] TextBox const&,
+                    TextBoxBeforeTextChangingEventArgs const& args)
+                {
+                    const hstring text = args.NewText();
+                    if (!text.empty() &&
+                        !IsValidRuleGlyph(std::wstring_view{
+                            text.c_str(), text.size() }))
+                    {
+                        args.Cancel(true);
+                    }
+                });
+
+            Grid glyphEditor;
+            glyphEditor.ColumnSpacing(16);
+            ColumnDefinition inputColumn;
+            inputColumn.Width(GridLengthHelper::Auto());
+            glyphEditor.ColumnDefinitions().Append(inputColumn);
+            ColumnDefinition previewColumn;
+            previewColumn.Width(
+                GridLengthHelper::FromValueAndType(
+                    1, GridUnitType::Star));
+            glyphEditor.ColumnDefinitions().Append(previewColumn);
+            glyphEditor.Children().Append(glyphBox);
+
+            Border editorPreview;
+            editorPreview.Width(48);
+            editorPreview.Height(48);
+            editorPreview.VerticalAlignment(VerticalAlignment::Center);
+            editorPreview.HorizontalAlignment(HorizontalAlignment::Center);
+            editorPreview.BorderBrush(
+                Application::Current().Resources().Lookup(
+                    box_value(L"CardStrokeColorDefaultBrush"))
+                    .as<Media::Brush>());
+            editorPreview.BorderThickness(Thickness{ 1 });
+            editorPreview.CornerRadius(
+                Microsoft::UI::Xaml::CornerRadius{ 4, 4, 4, 4 });
+            auto initialPreview = CreateGlyphVisual(
+                initial.glyph, L"AccentFillColorDefaultBrush");
+            initialPreview.HorizontalAlignment(HorizontalAlignment::Center);
+            initialPreview.VerticalAlignment(VerticalAlignment::Center);
+            editorPreview.Child(initialPreview);
+            Grid::SetColumn(editorPreview, 1);
+            glyphEditor.Children().Append(editorPreview);
+            glyphBox.TextChanged(
+                [editorPreview](
+                    IInspectable const& sender,
+                    [[maybe_unused]] TextChangedEventArgs const&)
+                {
+                    const hstring text = sender.as<TextBox>().Text();
+                    auto preview = CreateGlyphVisual(
+                        std::wstring_view{ text.c_str(), text.size() },
+                        L"AccentFillColorDefaultBrush");
+                    preview.HorizontalAlignment(HorizontalAlignment::Center);
+                    preview.VerticalAlignment(VerticalAlignment::Center);
+                    editorPreview.Child(preview);
+                });
+            panel.Children().Append(glyphEditor);
+
+            TextBlock glyphDescription;
+            glyphDescription.Text(
+                m_resources.GetString(L"RuleGlyphDescription"));
+            glyphDescription.Foreground(
+                Application::Current().Resources().Lookup(
+                    box_value(L"TextFillColorSecondaryBrush"))
+                    .as<Media::Brush>());
+            glyphDescription.FontSize(12);
+            glyphDescription.TextWrapping(TextWrapping::Wrap);
+            panel.Children().Append(glyphDescription);
+
+            TextBlock formatsHeader;
+            formatsHeader.Text(m_resources.GetString(L"RuleFormatsLabel"));
+            formatsHeader.FontWeight(Windows::UI::Text::FontWeights::SemiBold());
+            panel.Children().Append(formatsHeader);
+
+            if (omittedFormats > 0)
+            {
+                std::wstring text{ m_resources.GetString(L"RuleUnsupportedFormatsOmitted") };
+                const auto marker = text.find(L"{0}");
+                if (marker != std::wstring::npos)
+                {
+                    text.replace(marker, 3, std::to_wstring(omittedFormats));
+                }
+                TextBlock omitted;
+                omitted.Text(hstring{ text });
+                omitted.TextWrapping(TextWrapping::Wrap);
+                omitted.Foreground(
+                    Application::Current().Resources().Lookup(
+                        box_value(L"TextFillColorSecondaryBrush"))
+                        .as<Media::Brush>());
+                panel.Children().Append(omitted);
+            }
+
+            std::vector<ComboBox> choices;
+            choices.reserve(formats.size());
+            for (std::size_t formatIndex = 0;
+                 formatIndex < formats.size();
+                 ++formatIndex)
+            {
+                Grid row;
+                row.ColumnSpacing(8);
+                row.ColumnDefinitions().Append(ColumnDefinition{});
+                row.ColumnDefinitions().GetAt(0).Width(
+                    GridLengthHelper::FromValueAndType(1, GridUnitType::Star));
+                row.ColumnDefinitions().Append(ColumnDefinition{});
+                row.ColumnDefinitions().GetAt(1).Width(
+                    GridLengthHelper::FromPixels(132));
+
+                TextBlock formatName;
+                formatName.Text(hstring{
+                    ClipboardFormatIdentityName(formats[formatIndex]) });
+                formatName.TextWrapping(TextWrapping::Wrap);
+                formatName.VerticalAlignment(VerticalAlignment::Center);
+                row.Children().Append(formatName);
+
+                ComboBox choice;
+                choice.HorizontalAlignment(HorizontalAlignment::Stretch);
+                choice.Items().Append(box_value(
+                    m_resources.GetString(L"RuleMustHaveChoice")));
+                choice.Items().Append(box_value(
+                    m_resources.GetString(L"RuleMustNotHaveChoice")));
+                choice.Items().Append(box_value(
+                    m_resources.GetString(L"RuleRemoveChoice")));
+                choice.SelectedIndex(
+                    initial.conditions[formatIndex].mustBePresent ? 0 : 1);
+                Grid::SetColumn(choice, 1);
+                row.Children().Append(choice);
+                choices.push_back(choice);
+                panel.Children().Append(row);
+            }
+
+            TextBlock errorText;
+            errorText.Foreground(
+                Application::Current().Resources().Lookup(
+                    box_value(L"SystemFillColorCriticalBrush"))
+                    .as<Media::Brush>());
+            errorText.TextWrapping(TextWrapping::Wrap);
+            errorText.Visibility(Visibility::Collapsed);
+            panel.Children().Append(errorText);
+
+            ScrollViewer scroll;
+            scroll.MaxHeight(500);
+            scroll.VerticalScrollBarVisibility(ScrollBarVisibility::Auto);
+            scroll.Content(panel);
+            dialog.Content(scroll);
+
+            std::optional<ClipboardRule> accepted;
+            dialog.PrimaryButtonClick(
+                [&](ContentDialog const&,
+                    ContentDialogButtonClickEventArgs const& args)
+                {
+                    ClipboardRule candidate = initial;
+                    candidate.name = std::wstring{ nameBox.Text() };
+                    candidate.glyph = std::wstring{ glyphBox.Text() };
+                    candidate.conditions.clear();
+                    for (std::size_t conditionIndex = 0;
+                         conditionIndex < choices.size();
+                         ++conditionIndex)
+                    {
+                        const int selected = choices[conditionIndex].SelectedIndex();
+                        if (selected != 2)
+                        {
+                            candidate.conditions.push_back(
+                                { formats[conditionIndex], selected == 0 });
+                        }
+                    }
+
+                    const bool blankName =
+                        candidate.name.empty() ||
+                        std::ranges::all_of(
+                            candidate.name,
+                            [](wchar_t value) { return iswspace(value) != 0; });
+                    if (blankName)
+                    {
+                        errorText.Text(m_resources.GetString(L"RuleNameRequiredError"));
+                    }
+                    else if (!IsValidRuleGlyph(candidate.glyph))
+                    {
+                        errorText.Text(m_resources.GetString(L"RuleGlyphInvalidError"));
+                    }
+                    else if (candidate.conditions.empty())
+                    {
+                        errorText.Text(m_resources.GetString(L"RuleConditionsRequiredError"));
+                    }
+                    else if (!ValidateClipboardRule(candidate))
+                    {
+                        errorText.Text(m_resources.GetString(L"RuleInvalidError"));
+                    }
+                    else
+                    {
+                        accepted = std::move(candidate);
+                        return;
+                    }
+                    errorText.Visibility(Visibility::Visible);
+                    args.Cancel(true);
+                });
+
+            const auto result = co_await dialog.ShowAsync();
+            if (result != ContentDialogResult::Primary || !accepted)
+            {
+                co_return;
+            }
+
+            auto rules = m_rules;
+            if (index)
+            {
+                if (*index >= rules.size())
+                {
+                    co_return;
+                }
+                rules[*index] = std::move(*accepted);
+            }
+            else
+            {
+                rules.push_back(std::move(*accepted));
+            }
+            PersistRules(std::move(rules));
+        }
+        catch (const hresult_error& ex)
+        {
+            ShowError(m_resources.GetString(L"RuleEditorFailedTitle"), ex.message());
+        }
+        catch (const std::exception& ex)
+        {
+            ShowError(
+                m_resources.GetString(L"RuleEditorFailedTitle"),
+                to_hstring(ex.what()));
+        }
+    }
+
     // --- Labels ---
 
     void MainPage::UpdateLabels()
@@ -371,13 +1191,19 @@ namespace winrt::CopyPointerNotifier_Settings::implementation
         m_lastClipboardSequence = sequence;
 
         hstring indicator;
-        if (!result.contentType)
+        if (result.formats.empty())
         {
             indicator = m_resources.GetString(L"ClipboardIndicatorNone");
         }
         else
         {
-            switch (*result.contentType)
+            const ClipboardIndicator evaluated =
+                ClipboardRuleEngine{ m_rules }.Evaluate(result.formats);
+            if (evaluated.IsCustom())
+            {
+                indicator = hstring{ evaluated.glyph };
+            }
+            else switch (evaluated.contentType)
             {
                 case ClipboardContentType::Image: indicator = L"Image"; break;
                 case ClipboardContentType::Files: indicator = L"Files"; break;
@@ -461,6 +1287,10 @@ namespace winrt::CopyPointerNotifier_Settings::implementation
 
     void MainPage::Reset_Click([[maybe_unused]] IInspectable const&, [[maybe_unused]] RoutedEventArgs const&)
     {
+        if (!PersistRules({}))
+        {
+            return;
+        }
         m_xPercent = DefaultX;
         m_yPercent = DefaultY;
         SizeSlider().Value(DefaultScale);
@@ -483,15 +1313,23 @@ namespace winrt::CopyPointerNotifier_Settings::implementation
 
     void MainPage::PreviewGlyph_Click(IInspectable const& sender, [[maybe_unused]] RoutedEventArgs const&)
     {
-        auto button = sender.try_as<Controls::Button>();
-        if (!button) return;
-        auto tag = button.Tag();
+        auto element = sender.try_as<FrameworkElement>();
+        if (!element) return;
+        auto tag = element.Tag();
         if (!tag) return;
         auto tagStr = unbox_value_or<hstring>(tag, L"");
-        uint32_t contentType = 0;
-        try { contentType = static_cast<uint32_t>(std::stoul(std::wstring(tagStr))); }
-        catch (...) { return; }
-        NotifyNative(PreviewGlyphMessage, contentType);
+        wchar_t* end = nullptr;
+        const unsigned long contentType =
+            std::wcstoul(tagStr.c_str(), &end, 10);
+        if (end == tagStr.c_str() || *end != L'\0' ||
+            contentType > static_cast<unsigned long>(
+                ClipboardContentType::Object))
+        {
+            return;
+        }
+        NotifyNative(
+            PreviewGlyphMessage,
+            static_cast<std::uint32_t>(contentType));
     }
 
     void MainPage::CopyClipboardStatus_Click(
@@ -550,7 +1388,7 @@ namespace winrt::CopyPointerNotifier_Settings::implementation
             MB_OK | MB_ICONERROR);
     }
 
-    // --- JSON backup/restore (minimal manual JSON) ---
+    // --- JSON backup/restore ---
 
     std::string MainPage::CreateBackupJson(bool startWithWindows)
     {
@@ -559,144 +1397,275 @@ namespace winrt::CopyPointerNotifier_Settings::implementation
         int enabled = ReadDword(prefKey, L"Enabled", 1);
         if (prefKey) RegCloseKey(prefKey);
 
-        std::ostringstream json;
-        json << "{\n";
-        json << "  \"schemaVersion\": 1,\n";
-        json << "  \"app\": {\n";
-        json << "    \"enabled\": " << (enabled != 0 ? "true" : "false") << ",\n";
-        json << "    \"startWithWindows\": " << (startWithWindows ? "true" : "false") << "\n";
-        json << "  },\n";
-        json << "  \"indicator\": {\n";
-        json << "    \"xPercent\": " << m_xPercent << ",\n";
-        json << "    \"yPercent\": " << m_yPercent << ",\n";
-        json << "    \"scalePercent\": " << static_cast<int>(std::round(SizeSlider().Value())) << ",\n";
-        json << "    \"animationStyle\": " << AnimationComboBox().SelectedIndex() << ",\n";
-        json << "    \"animationSpeed\": " << static_cast<int>(std::round(AnimationSpeedSlider().Value())) << ",\n";
-        json << "    \"visibilityMode\": " << VisibilityComboBox().SelectedIndex() << ",\n";
-        json << "    \"visibilityDurationSeconds\": " << static_cast<int>(std::round(VisibilityDurationSlider().Value())) << "\n";
-        json << "  }\n";
-        json << "}";
-        return json.str();
-    }
+        JsonObject root;
+        root.Insert(L"schemaVersion", JsonValue::CreateNumberValue(2));
 
-    // Minimal JSON parser for the known backup schema
-    static std::string GetJsonString(const std::string& json, const std::string& key)
-    {
-        auto pos = json.find("\"" + key + "\"");
-        if (pos == std::string::npos) return "";
-        pos = json.find(':', pos);
-        if (pos == std::string::npos) return "";
-        pos++;
-        while (pos < json.size() && (json[pos] == ' ' || json[pos] == '\t')) pos++;
-        if (pos < json.size() && json[pos] == '"')
+        JsonObject app;
+        app.Insert(L"enabled", JsonValue::CreateBooleanValue(enabled != 0));
+        app.Insert(
+            L"startWithWindows",
+            JsonValue::CreateBooleanValue(startWithWindows));
+        root.Insert(L"app", app);
+
+        JsonObject indicator;
+        indicator.Insert(L"xPercent", JsonValue::CreateNumberValue(m_xPercent));
+        indicator.Insert(L"yPercent", JsonValue::CreateNumberValue(m_yPercent));
+        indicator.Insert(
+            L"scalePercent",
+            JsonValue::CreateNumberValue(std::round(SizeSlider().Value())));
+        indicator.Insert(
+            L"animationStyle",
+            JsonValue::CreateNumberValue(AnimationComboBox().SelectedIndex()));
+        indicator.Insert(
+            L"animationSpeed",
+            JsonValue::CreateNumberValue(
+                std::round(AnimationSpeedSlider().Value())));
+        indicator.Insert(
+            L"visibilityMode",
+            JsonValue::CreateNumberValue(VisibilityComboBox().SelectedIndex()));
+        indicator.Insert(
+            L"visibilityDurationSeconds",
+            JsonValue::CreateNumberValue(
+                std::round(VisibilityDurationSlider().Value())));
+        root.Insert(L"indicator", indicator);
+
+        JsonArray rules;
+        for (const auto& rule : m_rules)
         {
-            pos++;
-            auto end = json.find('"', pos);
-            if (end == std::string::npos) return "";
-            return json.substr(pos, end - pos);
+            JsonObject ruleObject;
+            ruleObject.Insert(
+                L"id",
+                JsonValue::CreateStringValue(
+                    hstring{ std::to_wstring(rule.id) }));
+            ruleObject.Insert(
+                L"name", JsonValue::CreateStringValue(hstring{ rule.name }));
+            ruleObject.Insert(
+                L"glyph", JsonValue::CreateStringValue(hstring{ rule.glyph }));
+            ruleObject.Insert(
+                L"enabled",
+                JsonValue::CreateBooleanValue(rule.enabled));
+
+            JsonArray conditions;
+            for (const auto& condition : rule.conditions)
+            {
+                JsonObject conditionObject;
+                conditionObject.Insert(
+                    L"mustBePresent",
+                    JsonValue::CreateBooleanValue(condition.mustBePresent));
+                JsonObject format;
+                if (condition.format.IsRegistered())
+                {
+                    format.Insert(
+                        L"registeredName",
+                        JsonValue::CreateStringValue(
+                            hstring{ condition.format.registeredName }));
+                }
+                else
+                {
+                    format.Insert(
+                        L"standardFormat",
+                        JsonValue::CreateNumberValue(
+                            condition.format.standardFormat));
+                }
+                conditionObject.Insert(L"format", format);
+                conditions.Append(conditionObject);
+            }
+            ruleObject.Insert(L"conditions", conditions);
+            rules.Append(ruleObject);
         }
-        return "";
-    }
-
-    static int GetJsonInt(const std::string& json, const std::string& key, int fallback)
-    {
-        auto pos = json.find("\"" + key + "\"");
-        if (pos == std::string::npos) return fallback;
-        pos = json.find(':', pos);
-        if (pos == std::string::npos) return fallback;
-        pos++;
-        while (pos < json.size() && (json[pos] == ' ' || json[pos] == '\t')) pos++;
-        // Parse integer (may be negative)
-        std::string numStr;
-        if (pos < json.size() && json[pos] == '-') { numStr += '-'; pos++; }
-        while (pos < json.size() && json[pos] >= '0' && json[pos] <= '9')
-        {
-            numStr += json[pos++];
-        }
-        if (numStr.empty() || numStr == "-") return fallback;
-        try { return std::stoi(numStr); }
-        catch (...) { return fallback; }
-    }
-
-    static bool GetJsonBool(const std::string& json, const std::string& key, bool fallback)
-    {
-        auto pos = json.find("\"" + key + "\"");
-        if (pos == std::string::npos) return fallback;
-        pos = json.find(':', pos);
-        if (pos == std::string::npos) return fallback;
-        pos++;
-        while (pos < json.size() && (json[pos] == ' ' || json[pos] == '\t')) pos++;
-        if (json.compare(pos, 4, "true") == 0) return true;
-        if (json.compare(pos, 5, "false") == 0) return false;
-        return fallback;
-    }
-
-    static bool HasJsonKey(const std::string& json, const std::string& key)
-    {
-        return json.find("\"" + key + "\"") != std::string::npos;
+        root.Insert(L"rules", rules);
+        return to_string(root.Stringify());
     }
 
     MainPage::BackupSettings MainPage::ParseBackupJson(const std::string& json)
     {
-        int schemaVersion = GetJsonInt(json, "schemaVersion", -1);
-        if (schemaVersion != 1)
+        try
         {
-            hstring msg = m_resources.GetString(L"UnsupportedBackupVersionError");
-            std::wstring fmtMsg{ msg };
-            auto pos = fmtMsg.find(L"{0}");
-            if (pos != std::wstring::npos)
-                fmtMsg.replace(pos, 3, std::to_wstring(schemaVersion));
-            throw std::invalid_argument(winrt::to_string(hstring{ fmtMsg }));
-        }
+            const JsonObject root = JsonObject::Parse(to_hstring(json));
+            const double schemaNumber = root.GetNamedNumber(L"schemaVersion");
+            if (schemaNumber != std::round(schemaNumber))
+            {
+                throw std::invalid_argument(
+                    to_string(m_resources.GetString(L"BackupInvalidJsonError")));
+            }
+            const int schemaVersion = static_cast<int>(schemaNumber);
+            if (schemaVersion != 1 && schemaVersion != 2)
+            {
+                hstring msg =
+                    m_resources.GetString(L"UnsupportedBackupVersionError");
+                std::wstring formatted{ msg };
+                const auto marker = formatted.find(L"{0}");
+                if (marker != std::wstring::npos)
+                {
+                    formatted.replace(
+                        marker, 3, std::to_wstring(schemaVersion));
+                }
+                throw std::invalid_argument(
+                    to_string(hstring{ formatted }));
+            }
 
-        if (!HasJsonKey(json, "app") || !HasJsonKey(json, "indicator"))
-        {
-            throw std::invalid_argument(
-                winrt::to_string(m_resources.GetString(L"BackupMissingSettingsError")));
-        }
+            const JsonObject app = root.GetNamedObject(L"app");
+            const JsonObject indicator = root.GetNamedObject(L"indicator");
+            const auto readInteger =
+                [this](JsonObject const& object, wchar_t const* name)
+                {
+                    const double value = object.GetNamedNumber(name);
+                    if (value != std::round(value) ||
+                        value < std::numeric_limits<int>::min() ||
+                        value > std::numeric_limits<int>::max())
+                    {
+                        throw std::invalid_argument(to_string(
+                            m_resources.GetString(L"BackupInvalidJsonError")));
+                    }
+                    return static_cast<int>(value);
+                };
 
-        int xPct = GetJsonInt(json, "xPercent", DefaultX);
-        int yPct = GetJsonInt(json, "yPercent", DefaultY);
-        int scale = GetJsonInt(json, "scalePercent", DefaultScale);
-        int animStyle = GetJsonInt(json, "animationStyle", DefaultAnimationStyle);
-        int animSpeed = GetJsonInt(json, "animationSpeed", DefaultAnimationSpeed);
-        int visMode = GetJsonInt(json, "visibilityMode", DefaultVisibilityMode);
-        int visDur = GetJsonInt(json, "visibilityDurationSeconds", DefaultVisibilityDurationSeconds);
+            const int xPct = readInteger(indicator, L"xPercent");
+            const int yPct = readInteger(indicator, L"yPercent");
+            const int scale = readInteger(indicator, L"scalePercent");
+            const int animStyle = readInteger(indicator, L"animationStyle");
+            const int animSpeed = readInteger(indicator, L"animationSpeed");
+            const int visMode = readInteger(indicator, L"visibilityMode");
+            const int visDur =
+                readInteger(indicator, L"visibilityDurationSeconds");
 
-        if (xPct < MinimumPosition || xPct > MaximumPosition ||
-            yPct < MinimumPosition || yPct > MaximumPosition ||
-            scale < 0 || scale > 100)
-        {
-            throw std::invalid_argument(
-                winrt::to_string(m_resources.GetString(L"BackupInvalidIndicatorError")));
-        }
-        if (animStyle < 0 || animStyle > 3)
-        {
-            throw std::invalid_argument(
-                winrt::to_string(m_resources.GetString(L"BackupInvalidAnimationError")));
-        }
-        if (animSpeed < 0 || animSpeed > 100)
-        {
-            throw std::invalid_argument(
-                winrt::to_string(m_resources.GetString(L"BackupInvalidAnimationSpeedError")));
-        }
-        if (visMode < 0 || visMode > 1 || visDur < 1 || visDur > 60)
-        {
-            throw std::invalid_argument(
-                winrt::to_string(m_resources.GetString(L"BackupInvalidVisibilityError")));
-        }
+            if (xPct < MinimumPosition || xPct > MaximumPosition ||
+                yPct < MinimumPosition || yPct > MaximumPosition ||
+                scale < 0 || scale > 100)
+            {
+                throw std::invalid_argument(to_string(
+                    m_resources.GetString(L"BackupInvalidIndicatorError")));
+            }
+            if (animStyle < 0 || animStyle > 3)
+            {
+                throw std::invalid_argument(to_string(
+                    m_resources.GetString(L"BackupInvalidAnimationError")));
+            }
+            if (animSpeed < 0 || animSpeed > 100)
+            {
+                throw std::invalid_argument(to_string(
+                    m_resources.GetString(L"BackupInvalidAnimationSpeedError")));
+            }
+            if (visMode < 0 || visMode > 1 || visDur < 1 || visDur > 60)
+            {
+                throw std::invalid_argument(to_string(
+                    m_resources.GetString(L"BackupInvalidVisibilityError")));
+            }
 
-        return BackupSettings{
-            GetJsonBool(json, "enabled", true),
-            GetJsonBool(json, "startWithWindows", false),
-            xPct,
-            yPct,
-            scale,
-            animStyle,
-            animSpeed,
-            visMode,
-            visDur,
-        };
+            std::vector<ClipboardRule> rules;
+            if (schemaVersion == 2)
+            {
+                const JsonArray rulesArray = root.GetNamedArray(L"rules");
+                std::set<std::uint64_t> ids;
+                for (std::uint32_t ruleIndex = 0;
+                     ruleIndex < rulesArray.Size();
+                     ++ruleIndex)
+                {
+                    const JsonObject object =
+                        rulesArray.GetObjectAt(ruleIndex);
+                    ClipboardRule rule;
+                    const std::wstring idText{
+                        object.GetNamedString(L"id") };
+                    wchar_t* end = nullptr;
+                    errno = 0;
+                    rule.id = std::wcstoull(
+                        idText.c_str(), &end, 10);
+                    if (idText.empty() ||
+                        !std::ranges::all_of(
+                            idText,
+                            [](wchar_t value)
+                            {
+                                return value >= L'0' && value <= L'9';
+                            }) ||
+                        errno == ERANGE || end == idText.c_str() ||
+                        *end != L'\0')
+                    {
+                        throw std::invalid_argument(to_string(
+                            m_resources.GetString(L"BackupInvalidRulesError")));
+                    }
+                    rule.name = object.GetNamedString(L"name");
+                    rule.glyph = object.GetNamedString(L"glyph");
+                    rule.enabled = object.GetNamedBoolean(L"enabled");
+
+                    const JsonArray conditions =
+                        object.GetNamedArray(L"conditions");
+                    for (std::uint32_t conditionIndex = 0;
+                         conditionIndex < conditions.Size();
+                         ++conditionIndex)
+                    {
+                        const JsonObject conditionObject =
+                            conditions.GetObjectAt(conditionIndex);
+                        ClipboardRuleCondition condition;
+                        condition.mustBePresent =
+                            conditionObject.GetNamedBoolean(
+                                L"mustBePresent");
+                        const JsonObject format =
+                            conditionObject.GetNamedObject(L"format");
+                        const bool hasStandard =
+                            format.HasKey(L"standardFormat");
+                        const bool hasRegistered =
+                            format.HasKey(L"registeredName");
+                        if (hasStandard == hasRegistered)
+                        {
+                            throw std::invalid_argument(to_string(
+                                m_resources.GetString(
+                                    L"BackupInvalidRulesError")));
+                        }
+                        if (hasRegistered)
+                        {
+                            condition.format.registeredName =
+                                format.GetNamedString(L"registeredName");
+                        }
+                        else
+                        {
+                            const double number =
+                                format.GetNamedNumber(L"standardFormat");
+                            if (number != std::round(number) ||
+                                number <= 0 ||
+                                number > std::numeric_limits<UINT>::max())
+                            {
+                                throw std::invalid_argument(to_string(
+                                    m_resources.GetString(
+                                        L"BackupInvalidRulesError")));
+                            }
+                            condition.format.standardFormat =
+                                static_cast<UINT>(number);
+                        }
+                        rule.conditions.push_back(std::move(condition));
+                    }
+                    if (!ValidateClipboardRule(rule) ||
+                        !ids.insert(rule.id).second)
+                    {
+                        throw std::invalid_argument(to_string(
+                            m_resources.GetString(
+                                L"BackupInvalidRulesError")));
+                    }
+                    rules.push_back(std::move(rule));
+                }
+            }
+
+            return BackupSettings{
+                app.GetNamedBoolean(L"enabled"),
+                app.GetNamedBoolean(L"startWithWindows"),
+                xPct,
+                yPct,
+                scale,
+                animStyle,
+                animSpeed,
+                visMode,
+                visDur,
+                std::move(rules),
+            };
+        }
+        catch (const std::invalid_argument&)
+        {
+            throw;
+        }
+        catch (const hresult_error&)
+        {
+            throw std::invalid_argument(
+                to_string(m_resources.GetString(L"BackupInvalidJsonError")));
+        }
     }
 
     void MainPage::ApplyBackupSettings(const BackupSettings& settings)
@@ -712,6 +1681,8 @@ namespace winrt::CopyPointerNotifier_Settings::implementation
             RegCloseKey(prefKey);
         }
 
+        const bool wasLoaded = m_loaded;
+        m_loaded = false;
         m_xPercent = settings.xPercent;
         m_yPercent = settings.yPercent;
         SizeSlider().Value(static_cast<double>(settings.scalePercent));
@@ -720,6 +1691,7 @@ namespace winrt::CopyPointerNotifier_Settings::implementation
         VisibilityComboBox().SelectedIndex(settings.visibilityMode);
         VisibilityDurationSlider().Value(
             static_cast<double>(settings.visibilityDurationSeconds));
+        m_loaded = wasLoaded;
         SaveSettings();
         UpdatePositionMarker();
         UpdateLabels();
@@ -885,6 +1857,7 @@ namespace winrt::CopyPointerNotifier_Settings::implementation
             }
             auto file = PickJsonFile(hwnd, false);
             if (!file) co_return;
+            IsEnabled(false);
 
             std::ifstream input(*file, std::ios::binary);
             input.exceptions(std::ios::badbit);
@@ -898,8 +1871,33 @@ namespace winrt::CopyPointerNotifier_Settings::implementation
                     winrt::to_string(m_resources.GetString(L"BackupEmptyError")));
             }
             BackupSettings settings = ParseBackupJson(json);
-            co_await WriteStartWithWindowsAsync(settings.startWithWindows);
+            const auto previousRules = m_rules;
+            if (!SaveClipboardRules(settings.rules))
+            {
+                throw std::invalid_argument(to_string(
+                    m_resources.GetString(L"RuleSaveFailedMessage")));
+            }
+            try
+            {
+                co_await WriteStartWithWindowsAsync(
+                    settings.startWithWindows);
+            }
+            catch (...)
+            {
+                if (!SaveClipboardRules(previousRules))
+                {
+                    throw std::runtime_error(to_string(
+                        m_resources.GetString(
+                            L"RuleRollbackFailedMessage")));
+                }
+                throw;
+            }
+            m_rules = settings.rules;
             ApplyBackupSettings(settings);
+            RefreshRulesList();
+            NotifyNative(SettingsChangedMessage);
+            m_lastClipboardSequence = 0;
+            UpdateClipboardStatus();
         }
         catch (const std::invalid_argument& ex)
         {
@@ -922,5 +1920,6 @@ namespace winrt::CopyPointerNotifier_Settings::implementation
                 m_resources.GetString(L"RestoreFailedTitle"),
                 L"An unexpected error occurred.");
         }
+        IsEnabled(true);
     }
 }

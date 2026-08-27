@@ -8,6 +8,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 add_executable(CopyPointerNotifier WIN32
     src/application.cpp
     src/clipboard_classifier.cpp
+    src/clipboard_rules.cpp
     src/main.cpp
     src/overlay_window.cpp
     src/startup_registration.cpp
@@ -91,6 +92,7 @@ if(BUILD_TESTING)
     add_executable(clipboard_classifier_tests
         tests/clipboard_classifier_tests.cpp
         src/clipboard_classifier.cpp
+        src/clipboard_rules.cpp
     )
     target_include_directories(clipboard_classifier_tests PRIVATE src)
     target_compile_definitions(clipboard_classifier_tests PRIVATE
