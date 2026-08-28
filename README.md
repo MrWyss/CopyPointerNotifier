@@ -25,11 +25,15 @@ Official prebuilt releases are currently available exclusively through the Micro
 
 ## Screenshots
 
-| Text | Rich text |
+| Copy indicators | Clipboard rules |
 | :---: | :---: |
-| <img src="docs/images/TextScreenshot.png" alt="Text copy indicator beside the pointer" width="300"> | <img src="docs/images/RichTextScreenshot.png" alt="Rich-text copy indicator beside the pointer" width="430"> |
-| **Image** | **Settings** |
-| <img src="docs/images/ImageScreenshot.png" alt="Image copy indicator beside the pointer" width="400"> | <img src="docs/images/SettingsModes.png" alt="Copy Pointer Notifier settings modes" width="300"> |
+| <img src="docs/images/StoreScreenshot-01-CopyIndicators.png" alt="Text, rich-text, and image copy indicators" width="520"> | <img src="docs/images/StoreScreenshot-02-Rules.png" alt="Ordered custom and built-in clipboard rules" width="520"> |
+| **Rule editor** | **Appearance** |
+| <img src="docs/images/StoreScreenshot-03-RuleEditor.png" alt="Clipboard rule editor with format conditions and a custom glyph" width="520"> | <img src="docs/images/StoreScreenshot-04-Appearance.png" alt="Pointer-relative position, animation, and visibility controls" width="520"> |
+
+<p align="center">
+  <img src="docs/images/StoreScreenshot-05-Overview.png" alt="Copy Pointer Notifier rules, appearance controls, and pointer feedback" width="760">
+</p>
 
 ## Features
 

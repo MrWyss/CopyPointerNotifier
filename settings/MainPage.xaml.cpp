@@ -315,27 +315,30 @@ namespace winrt::CopyPointerNotifier_Settings::implementation
             std::wstring_view glyph,
             const wchar_t* brushResource = L"TextFillColorPrimaryBrush")
         {
+            const bool useAccentBrush =
+                std::wstring_view{ brushResource } ==
+                L"AccentFillColorDefaultBrush";
             const auto geometry = CreateGlyphGeometry(glyph);
             if (!geometry)
             {
-                TextBlock fallback;
+                const wchar_t* markup = useAccentBrush
+                    ? LR"(<TextBlock xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" Foreground="{ThemeResource AccentFillColorDefaultBrush}" />)"
+                    : LR"(<TextBlock xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />)";
+                auto fallback =
+                    Markup::XamlReader::Load(markup).as<TextBlock>();
                 fallback.Text(hstring{ glyph });
                 fallback.IsColorFontEnabled(true);
                 fallback.FontSize(20);
-                fallback.Foreground(
-                    Application::Current().Resources().Lookup(
-                        box_value(brushResource))
-                        .as<Media::Brush>());
                 fallback.Width(30);
                 return fallback;
             }
 
-            Shapes::Path preview;
+            const wchar_t* markup = useAccentBrush
+                ? LR"(<Path xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" Fill="{ThemeResource AccentFillColorDefaultBrush}" />)"
+                : LR"(<Path xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" Fill="{ThemeResource TextFillColorPrimaryBrush}" />)";
+            auto preview =
+                Markup::XamlReader::Load(markup).as<Shapes::Path>();
             preview.Data(geometry);
-            preview.Fill(
-                Application::Current().Resources().Lookup(
-                    box_value(brushResource))
-                    .as<Media::Brush>());
             preview.Width(30);
             preview.Height(24);
             preview.HorizontalAlignment(HorizontalAlignment::Left);
@@ -989,13 +992,11 @@ namespace winrt::CopyPointerNotifier_Settings::implementation
             nameText.FontWeight(Windows::UI::Text::FontWeights::SemiBold());
             nameText.TextTrimming(TextTrimming::CharacterEllipsis);
             labels.Children().Append(nameText);
-            TextBlock statusText;
+            auto statusText = Markup::XamlReader::Load(
+                LR"(<TextBlock xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />)")
+                .as<TextBlock>();
             statusText.Text(status);
             statusText.FontSize(12);
-            statusText.Foreground(
-                Application::Current().Resources().Lookup(
-                    box_value(L"TextFillColorSecondaryBrush"))
-                    .as<Media::Brush>());
             labels.Children().Append(statusText);
             Grid::SetColumn(labels, 1);
             row.Children().Append(labels);

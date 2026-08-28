@@ -6,7 +6,7 @@ The packaged app uses the manifest-declared Windows startup task. Unpackaged bui
 
 The Microsoft Store installs the Windows App Runtime framework dependency declared by the package. No .NET runtime is required.
 
-With version 1.0.0.0 and the native Settings implementation, each architecture package is approximately 0.5 MiB and the combined x64/ARM64 bundle is approximately 1 MiB.
+With version 1.1.0.0 and the native Settings implementation, each architecture package is approximately 0.5 MiB and the combined x64/ARM64 bundle is approximately 1 MiB.
 
 The Store package appears in the Windows Start menu. Hiding it with `AppListEntry="none"` would classify it as a headless app and require the Partner Center `HeadlessAppBypass` waiver.
 
@@ -28,7 +28,7 @@ The manifest defaults are suitable only for inspecting an unsigned local package
   -IdentityName '<Package identity name>' `
   -Publisher '<Publisher ID>' `
   -PublisherDisplayName '<Publisher display name>' `
-  -Version '1.0.0.0'
+  -Version '1.1.0.0'
 ```
 
 ## Build ARM64
@@ -48,7 +48,7 @@ Then package it:
   -IdentityName '<Package identity name>' `
   -Publisher '<Publisher ID>' `
   -PublisherDisplayName '<Publisher display name>' `
-  -Version '1.0.0.0'
+  -Version '1.1.0.0'
 ```
 
 ## Bundle
@@ -56,7 +56,11 @@ Then package it:
 After both architecture packages exist:
 
 ```powershell
-.\packaging\Build-MsixBundle.ps1 -Version '1.0.0.0'
+.\packaging\Build-MsixBundle.ps1 -Version '1.1.0.0'
 ```
 
-Pass `-CertificateThumbprint` to either script for local signing with a code-signing certificate in `Cert:\CurrentUser\My`. Microsoft Store submission must use the exact Partner Center identity and monotonically increasing four-part versions.
+Microsoft Store submission packages should remain unsigned; Partner Center signs
+accepted packages. Use `-CertificateThumbprint` only when a signed package is
+needed for local installation testing with a trusted development certificate.
+Store submissions must use the exact Partner Center identity and monotonically
+increasing four-part versions.
