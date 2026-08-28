@@ -4,7 +4,7 @@ param(
     [ValidateSet('x64', 'arm64')]
     [string]$Architecture,
 
-    [string]$IdentityName = 'MrWyss.CopyPointerNotifier',
+    [string]$IdentityName = 'MrWyss.CopyPointerNotification',
     [string]$Publisher = 'CN=MrWyss',
     [string]$PublisherDisplayName = 'MrWyss',
     [string]$Version = '1.1.0.0',

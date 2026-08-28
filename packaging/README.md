@@ -59,13 +59,14 @@ after reinstalling, restart Explorer.
 
 ## Store identity
 
-Copy the following values from the app's **Product identity** page in Partner Center and pass them to each architecture build:
+The reserved Microsoft Store identity is:
 
-- Package/Identity/Name
-- Package/Identity/Publisher
-- Publisher display name
+- Package/Identity/Name: `MrWyss.CopyPointerNotification`
+- Package/Identity/Publisher: `CN=F7578173-2D1D-45C0-A422-4858557D8E62`
+- Publisher display name: `MrWyss`
+- Package family name: `MrWyss.CopyPointerNotification_ata2kafnqgxze`
 
-The manifest defaults are suitable only for inspecting an unsigned local package; they do not represent the reserved Store identity.
+These values must match the app's **Product identity** page in Partner Center.
 
 ## Build x64
 
