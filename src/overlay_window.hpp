@@ -19,6 +19,7 @@ public:
     void Hide();
     bool Tick();
     bool IsSettled() const;
+    bool IsActive() const;
     void MoveToCursor(const POINT& cursorPosition);
     void SetGlyphPosition(GlyphPosition position);
     void SetGlyphScalePercent(int scalePercent);
@@ -32,6 +33,7 @@ private:
     LRESULT HandleMessage(UINT message, WPARAM wParam, LPARAM lParam);
 
     bool CalculateIconRect(const CURSORINFO& cursorInfo, RECT& iconRect);
+    bool UpdateMonitorBounds(const POINT& cursorPosition);
     bool PositionNearCursor(const CURSORINFO& cursorInfo);
     bool RenderAtCursor(const CURSORINFO& cursorInfo);
     void UpdateCursorMetrics(HCURSOR cursor);
@@ -47,6 +49,8 @@ private:
     ClipboardIndicator indicator_{ClipboardContentType::Text, {}};
     ULONGLONG animationStartedAt_ = 0;
     UINT dpi_ = 96;
+    RECT cachedMonitorBounds_{};
+    bool monitorBoundsValid_ = false;
     BYTE opacity_ = 0;
     bool settled_ = false;
     bool needsRender_ = false;
@@ -59,6 +63,12 @@ private:
     COLORREF cursorColor_ = RGB(255, 255, 255);
     DWORD cursorType_ = 0;
     int configuredCursorSize_ = 32;
+    HCURSOR sampledCursor_ = nullptr;
+    int sampledCursorSize_ = 0;
+    DWORD sampledCursorType_ = 0xFFFFFFFF;
+    COLORREF sampledBaseColor_ = 0;
+    COLORREF sampledCursorColor_ = 0;
+    bool sampledCursorColorValid_ = false;
     GlyphPosition glyphPosition_{};
     int glyphScalePercent_ = 50;
     AnimationStyle animationStyle_ = AnimationStyle::FadeAndShrink;

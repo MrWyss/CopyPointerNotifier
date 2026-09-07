@@ -23,6 +23,7 @@ constexpr int kClipboardRetryLimit = 5;
 constexpr UINT kSettingsChangedMessage = WM_APP + 20;
 constexpr UINT kPreviewGlyphMessage = WM_APP + 21;
 constexpr UINT kPreviewCustomGlyphMessage = WM_APP + 22;
+constexpr UINT kPointerMoveMessage = WM_APP + 23;
 
 HWND FindSettingsWindow() {
     HWND result = nullptr;
@@ -151,9 +152,14 @@ LRESULT CALLBACK Application::MouseHookProc(
     if (code == HC_ACTION &&
         wParam == WM_MOUSEMOVE &&
         activeInstance_ &&
-        activeInstance_->window_) {
+        activeInstance_->window_ &&
+        activeInstance_->overlay_.IsActive()) {
         const auto* mouse = reinterpret_cast<MSLLHOOKSTRUCT*>(lParam);
-        activeInstance_->overlay_.MoveToCursor(mouse->pt);
+        activeInstance_->latestCursorPosition_ = mouse->pt;
+        if (!activeInstance_->pointerMoveQueued_ &&
+            PostMessageW(activeInstance_->window_, kPointerMoveMessage, 0, 0)) {
+            activeInstance_->pointerMoveQueued_ = true;
+        }
     }
     return CallNextHookEx(
         activeInstance_ ? activeInstance_->mouseHook_ : nullptr,
@@ -239,6 +245,10 @@ LRESULT Application::HandleMessage(UINT message, WPARAM wParam, LPARAM lParam) {
                     break;
                 }
             }
+            return 0;
+        case kPointerMoveMessage:
+            pointerMoveQueued_ = false;
+            overlay_.MoveToCursor(latestCursorPosition_);
             return 0;
         case WM_DESTROY:
             Shutdown();
