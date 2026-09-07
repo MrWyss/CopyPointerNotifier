@@ -52,16 +52,17 @@ Add-Type -AssemblyName System.Drawing
 $scales = @(100, 125, 150, 200, 400)
 
 # Sizes the shell asks for when it needs a plain icon (taskbar, jump lists,
-# Alt+Tab, search results, ...).
-$targetSizes = @(16, 20, 24, 30, 32, 36, 40, 48, 56, 60, 64, 72, 80, 96, 256)
+# Alt+Tab, search results, ...). Windows downscales from the next larger entry,
+# so these request points are enough without shipping every documented size.
+$targetSizes = @(16, 24, 32, 48, 256)
 
+# The manifest only references these three logos. Square71x71, Square310x310 and
+# Wide310x150 exist solely for resizable Windows 10 Start tiles, which Windows 11
+# never shows, so they are deliberately not generated.
 # Tiles keep the artwork inside a safety margin; the 44x44 logo is full bleed.
 $tiles = @(
     @{ Name = 'Square44x44Logo';   Width = 44;  Height = 44;  Padding = 1.00 },
-    @{ Name = 'Square71x71Logo';   Width = 71;  Height = 71;  Padding = 0.80 },
     @{ Name = 'Square150x150Logo'; Width = 150; Height = 150; Padding = 0.80 },
-    @{ Name = 'Square310x310Logo'; Width = 310; Height = 310; Padding = 0.80 },
-    @{ Name = 'Wide310x150Logo';   Width = 310; Height = 150; Padding = 0.80 },
     @{ Name = 'StoreLogo';         Width = 50;  Height = 50;  Padding = 0.80 }
 )
 
@@ -151,9 +152,11 @@ try {
     }
 
     # Unplated variants keep the taskbar background transparent instead of
-    # letting Windows plate the icon with the system accent color.
+    # letting Windows plate the icon with the system accent color. The
+    # lightunplated form is omitted on purpose: Windows falls back to the
+    # unplated file, which reads correctly on light backgrounds too.
     foreach ($size in $targetSizes) {
-        foreach ($form in @('', '_altform-unplated', '_altform-lightunplated')) {
+        foreach ($form in @('', '_altform-unplated')) {
             Save-Composite $size $size $size (
                 Join-Path $packagingAssets (
                     "Square44x44Logo.targetsize-{0}{1}.png" -f $size, $form))

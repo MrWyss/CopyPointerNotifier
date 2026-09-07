@@ -23,7 +23,12 @@ Windows cannot resolve the qualified names the manifest refers to.
 
 The `_altform-unplated` variants are what keep the taskbar and Start icons
 transparent — without them Windows draws the icon on a system accent colored
-plate.
+plate. `_altform-lightunplated` is intentionally absent: Windows falls back to
+the unplated file, which reads correctly on light backgrounds too.
+
+Only the three logos the manifest references are generated. `Square71x71Logo`,
+`Square310x310Logo` and `Wide310x150Logo` exist purely for resizable Windows 10
+Start tiles, which Windows 11 never displays, so they are not shipped.
 
 ## Store identity
 
