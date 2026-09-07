@@ -1,7 +1,16 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="70 42 410 410">
   <defs>
+    <!-- Expanded feDropShadow (dx 0, dy 4, stdDeviation 3, #000 at 24%) so the
+         shadow also renders in tools that do not support the shorthand. -->
     <filter id="shadow" x="-30%" y="-30%" width="180%" height="180%">
-      <feDropShadow dx="0" dy="4" stdDeviation="3" flood-color="#000" flood-opacity=".24"/>
+      <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
+      <feOffset dx="0" dy="4" result="shadowAlpha"/>
+      <feFlood flood-color="#000" flood-opacity=".24"/>
+      <feComposite in2="shadowAlpha" operator="in"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
     </filter>
   </defs>
   <g filter="url(#shadow)">
