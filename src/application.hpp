@@ -37,6 +37,8 @@ private:
     bool enabled_ = true;
     bool shuttingDown_ = false;
     bool settledTimerApplied_ = false;
+    bool pointerMoveQueued_ = false;
+    POINT latestCursorPosition_{};
     DWORD lastClipboardSequence_ = 0;
     int clipboardRetryCount_ = 0;
     UINT taskbarCreatedMessage_ = 0;

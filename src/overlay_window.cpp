@@ -352,6 +352,10 @@ bool OverlayWindow::IsSettled() const {
     return settled_;
 }
 
+bool OverlayWindow::IsActive() const {
+    return window_ != nullptr && animationStartedAt_ != 0;
+}
+
 void OverlayWindow::MoveToCursor(const POINT& cursorPosition) {
     if (!window_ || animationStartedAt_ == 0) {
         return;
@@ -387,6 +391,8 @@ void OverlayWindow::SetGlyphScalePercent(int scalePercent) {
 void OverlayWindow::RefreshCursorSettings() {
     cursorSettingsReadAt_ = 0;
     cachedCursor_ = nullptr;
+    sampledCursor_ = nullptr;
+    sampledCursorColorValid_ = false;
     needsRender_ = true;
 }
 
@@ -424,9 +430,15 @@ LRESULT OverlayWindow::HandleMessage(UINT message, WPARAM wParam, LPARAM lParam)
             dpi_ = HIWORD(wParam);
             needsRender_ = true;
             return 0;
+        case WM_DISPLAYCHANGE:
+            monitorBoundsValid_ = false;
+            needsRender_ = true;
+            return 0;
         case WM_SETTINGCHANGE:
         case WM_THEMECHANGED:
             cachedCursor_ = nullptr;
+            sampledCursor_ = nullptr;
+            sampledCursorColorValid_ = false;
             needsRender_ = true;
             return 0;
         case WM_DWMCOLORIZATIONCOLORCHANGED:
@@ -440,7 +452,10 @@ LRESULT OverlayWindow::HandleMessage(UINT message, WPARAM wParam, LPARAM lParam)
 bool OverlayWindow::CalculateIconRect(
     const CURSORINFO& cursorInfo,
     RECT& iconRect) {
-    dpi_ = GetDpiForWindow(window_);
+    if (!UpdateMonitorBounds(cursorInfo.ptScreenPos)) {
+        ShowWindow(window_, SW_HIDE);
+        return false;
+    }
     UpdateCursorMetrics(cursorInfo.hCursor);
     UpdateCursorStyleColor(cursorInfo.ptScreenPos);
 
@@ -458,16 +473,7 @@ bool OverlayWindow::CalculateIconRect(
         cursorInfo.ptScreenPos.y + yOffset + iconSize,
     };
 
-    const HMONITOR monitor = MonitorFromPoint(
-        cursorInfo.ptScreenPos,
-        MONITOR_DEFAULTTONEAREST);
-    MONITORINFO monitorInfo{sizeof(monitorInfo)};
-    if (!GetMonitorInfoW(monitor, &monitorInfo)) {
-        ShowWindow(window_, SW_HIDE);
-        return false;
-    }
-
-    const RECT& screen = monitorInfo.rcMonitor;
+    const RECT& screen = cachedMonitorBounds_;
     if (iconRect.left < screen.left ||
         iconRect.top < screen.top ||
         iconRect.right > screen.right ||
@@ -475,6 +481,32 @@ bool OverlayWindow::CalculateIconRect(
         ShowWindow(window_, SW_HIDE);
         return false;
     }
+    return true;
+}
+
+bool OverlayWindow::UpdateMonitorBounds(const POINT& cursorPosition) {
+    const bool cursorWithinCachedMonitor =
+        monitorBoundsValid_ &&
+        cursorPosition.x >= cachedMonitorBounds_.left &&
+        cursorPosition.x < cachedMonitorBounds_.right &&
+        cursorPosition.y >= cachedMonitorBounds_.top &&
+        cursorPosition.y < cachedMonitorBounds_.bottom;
+    if (cursorWithinCachedMonitor) {
+        return true;
+    }
+
+    const HMONITOR monitor = MonitorFromPoint(
+        cursorPosition,
+        MONITOR_DEFAULTTONEAREST);
+    MONITORINFO monitorInfo{sizeof(monitorInfo)};
+    if (!monitor || !GetMonitorInfoW(monitor, &monitorInfo)) {
+        monitorBoundsValid_ = false;
+        return false;
+    }
+
+    cachedMonitorBounds_ = monitorInfo.rcMonitor;
+    monitorBoundsValid_ = true;
+    dpi_ = GetDpiForWindow(window_);
     return true;
 }
 
@@ -486,12 +518,12 @@ bool OverlayWindow::PositionNearCursor(const CURSORINFO& cursorInfo) {
 
     SetWindowPos(
         window_,
-        HWND_TOPMOST,
+        nullptr,
         iconRect.left,
         iconRect.top,
         0,
         0,
-        SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
+        SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_SHOWWINDOW);
     return true;
 }
 
@@ -816,10 +848,24 @@ void OverlayWindow::UpdateCursorMetrics(HCURSOR cursor) {
             newCursorColor = configuredColor;
         }
         if (newCursorType != 2) {
-            SampleRenderedCursorColor(
-                cursor,
-                newCursorSize,
-                newCursorColor);
+            if (cursor != sampledCursor_ ||
+                newCursorSize != sampledCursorSize_ ||
+                newCursorType != sampledCursorType_ ||
+                newCursorColor != sampledBaseColor_) {
+                COLORREF sampledColor = newCursorColor;
+                sampledCursorColorValid_ = SampleRenderedCursorColor(
+                    cursor,
+                    newCursorSize,
+                    sampledColor);
+                sampledCursorColor_ = sampledColor;
+                sampledCursor_ = cursor;
+                sampledCursorSize_ = newCursorSize;
+                sampledCursorType_ = newCursorType;
+                sampledBaseColor_ = newCursorColor;
+            }
+            if (sampledCursorColorValid_) {
+                newCursorColor = sampledCursorColor_;
+            }
         }
 
         if (newCursorType != cursorType_ ||
