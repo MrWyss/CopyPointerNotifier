@@ -166,6 +166,7 @@ src\                 Native tray application and overlay
 settings\            WinUI 3 settings application
 tests\               Clipboard classification tests
 assets\              App icon source artwork and Windows ICO
+tools\               Icon generation from assets\AppIcon.svg
 docs\images\         Documentation, preview, and Store media
 CMakeLists.txt        Native and settings build orchestration
 ```

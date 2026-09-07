@@ -161,6 +161,32 @@ New-Item -ItemType Directory -Path $outputRoot -Force | Out-Null
 if (Test-Path -LiteralPath $packagePath) {
     Remove-Item -LiteralPath $packagePath -Force
 }
+
+# The Assets folder ships scale-* and targetsize-* qualified files. Windows only
+# resolves those through a resource index, so build one before packing.
+$makePri = Find-BuildTool 'makepri.exe'
+$priConfig = Join-Path $architectureRoot 'obj\priconfig.xml'
+New-Item -ItemType Directory -Path (Split-Path -Parent $priConfig) -Force | Out-Null
+& $makePri createconfig /cf $priConfig /dq en-US /o
+if ($LASTEXITCODE -ne 0) {
+    throw 'MakePri createconfig failed.'
+}
+
+# Drop the auto resource package rules so every scale ends up in a single
+# resources.pri; split .pri files would be ignored in a non-bundle package.
+$priXml = [xml](Get-Content -LiteralPath $priConfig -Raw)
+$packagingNode = $priXml.resources.SelectSingleNode('packaging')
+if ($packagingNode) {
+    [void]$priXml.resources.RemoveChild($packagingNode)
+    $priXml.Save($priConfig)
+}
+
+& $makePri new /pr $layout /cf $priConfig /of (Join-Path $layout 'resources.pri') `
+    /mn (Join-Path $layout 'AppxManifest.xml') /o
+if ($LASTEXITCODE -ne 0) {
+    throw 'MakePri failed.'
+}
+
 $makeAppx = Find-BuildTool 'makeappx.exe'
 & $makeAppx pack /o /d $layout /p $packagePath
 if ($LASTEXITCODE -ne 0) {

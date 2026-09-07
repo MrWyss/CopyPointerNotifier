@@ -10,6 +10,21 @@ With version 1.1.0.0 and the native Settings implementation, each architecture p
 
 The Store package appears in the Windows Start menu. Hiding it with `AppListEntry="none"` would classify it as a headless app and require the Partner Center `HeadlessAppBypass` waiver.
 
+## Assets
+
+`packaging\Assets` is generated, not hand-edited. Run `tools\Build-Icons.ps1`
+(requires Inkscape) after changing `assets\AppIcon.svg`; every PNG is rendered
+straight from the SVG at its final pixel size, so nothing is ever upscaled.
+
+The folder holds only qualifier-named files (`.scale-100` … `.scale-400` and
+`Square44x44Logo.targetsize-*`). `Build-Msix.ps1` therefore runs `makepri` to
+index them into a single `resources.pri` before packing; without that index
+Windows cannot resolve the qualified names the manifest refers to.
+
+The `_altform-unplated` variants are what keep the taskbar and Start icons
+transparent — without them Windows draws the icon on a system accent colored
+plate.
+
 ## Store identity
 
 Copy the following values from the app's **Product identity** page in Partner Center and pass them to each architecture build:
