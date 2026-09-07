@@ -112,6 +112,15 @@ $settingsPlatform = if ($Architecture -eq 'x64') { 'x64' } else { 'ARM64' }
 $msbuild = Get-ChildItem 'C:\BuildTools2026\MSBuild\Current\Bin\MSBuild.exe' -ErrorAction SilentlyContinue |
     Select-Object -First 1 -ExpandProperty FullName
 if (-not $msbuild) {
+    $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
+    if (Test-Path -LiteralPath $vswhere) {
+        $msbuild = & $vswhere -latest -products * `
+            -requires Microsoft.Component.MSBuild `
+            -find 'MSBuild\**\Bin\MSBuild.exe' |
+            Select-Object -First 1
+    }
+}
+if (-not $msbuild) {
     $msbuild = (Get-Command MSBuild.exe -ErrorAction Stop).Source
 }
 
