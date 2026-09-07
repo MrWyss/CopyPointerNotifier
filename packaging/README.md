@@ -26,9 +26,36 @@ transparent — without them Windows draws the icon on a system accent colored
 plate. `_altform-lightunplated` is intentionally absent: Windows falls back to
 the unplated file, which reads correctly on light backgrounds too.
 
+`BackgroundColor="transparent"` is deliberate. Windows 11 Start and taskbar use
+the unplated 44x44 assets, so they stay transparent. The App Installer dialog
+and Windows 10 live tiles ignore transparency and fall back to the system accent
+color; replacing the value with a fixed color would remove that at the cost of a
+permanent colored plate on every surface.
+
 Only the three logos the manifest references are generated. `Square71x71Logo`,
 `Square310x310Logo` and `Wide310x150Logo` exist purely for resizable Windows 10
 Start tiles, which Windows 11 never displays, so they are not shipped.
+
+## Local install testing
+
+Store submissions stay unsigned. To install a package locally, sign it with a
+self-signed certificate whose subject matches the manifest `Publisher` exactly:
+
+```powershell
+.\packaging\Sign-TestPackage.ps1
+```
+
+Then trust the exported certificate once from an elevated prompt and install:
+
+```powershell
+Import-Certificate `
+  -FilePath .\artifacts\certificates\CopyPointerNotifier-Test.cer `
+  -CertStoreLocation Cert:\LocalMachine\TrustedPeople
+Add-AppxPackage .\artifacts\msix\CopyPointerNotifier_1.1.0.0_x64.msix
+```
+
+Start menu and taskbar icons are cached aggressively. If a stale icon persists
+after reinstalling, restart Explorer.
 
 ## Store identity
 
