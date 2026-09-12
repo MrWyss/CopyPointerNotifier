@@ -7,8 +7,9 @@
     Publisher in the package manifest exactly, otherwise Windows rejects the
     signature. Store submissions stay unsigned - Partner Center signs them.
 
-    The script writes a .pfx (kept out of git) next to the package and exports
-    the public .cer that has to be trusted before the MSIX will install.
+    The script writes the private .pfx and public .cer under
+    artifacts\certificates. The certificate has to be trusted before the MSIX
+    will install.
 
 .PARAMETER Package
     Path to the .msix or .msixbundle to sign.

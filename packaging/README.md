@@ -38,20 +38,27 @@ Start tiles, which Windows 11 never displays, so they are not shipped.
 
 ## Local install testing
 
-Store submissions stay unsigned. To install a package locally, sign it with a
-self-signed certificate whose subject matches the manifest `Publisher` exactly:
+Store submissions stay unsigned. After building both architecture packages and
+the bundle, prepare the signed test files and Store upload folder together:
 
 ```powershell
-.\packaging\Sign-TestPackage.ps1
+.\packaging\Prepare-ReleaseArtifacts.ps1 -Version '1.1.1.0'
 ```
 
-Then trust the exported certificate once from an elevated prompt and install:
+The command recreates:
+
+- `artifacts\msix-signed`, containing signed x64 and ARM64 packages, a signed
+  bundle, the public test certificate, checksums, and an installation script.
+- `artifacts\store-submission-1.1.1.0`, containing the unsigned Store bundle,
+  the current `store-listing.md`, screenshots, promotional images, and
+  checksums.
+
+Never upload files from `artifacts\msix-signed` to Partner Center. To install the
+test build, open an elevated PowerShell prompt and run:
 
 ```powershell
-Import-Certificate `
-  -FilePath .\artifacts\certificates\CopyPointerNotifier-Test.cer `
-  -CertStoreLocation Cert:\LocalMachine\TrustedPeople
-Add-AppxPackage .\artifacts\msix\CopyPointerNotifier_1.1.1.0_x64.msix
+Set-ExecutionPolicy -Scope Process Bypass
+.\artifacts\msix-signed\Install-TestPackage.ps1
 ```
 
 Start menu and taskbar icons are cached aggressively. If a stale icon persists
