@@ -6,7 +6,7 @@ The packaged app uses the manifest-declared Windows startup task. Unpackaged bui
 
 The Microsoft Store installs the Windows App Runtime framework dependency declared by the package. No .NET runtime is required.
 
-With version 1.1.0.0 and the native Settings implementation, each architecture package is approximately 0.5 MiB and the combined x64/ARM64 bundle is approximately 1 MiB.
+With version 1.1.1.0 and the native Settings implementation, each architecture package is approximately 0.5 MiB and the combined x64/ARM64 bundle is approximately 1 MiB.
 
 The Store package appears in the Windows Start menu. Hiding it with `AppListEntry="none"` would classify it as a headless app and require the Partner Center `HeadlessAppBypass` waiver.
 
@@ -51,7 +51,7 @@ Then trust the exported certificate once from an elevated prompt and install:
 Import-Certificate `
   -FilePath .\artifacts\certificates\CopyPointerNotifier-Test.cer `
   -CertStoreLocation Cert:\LocalMachine\TrustedPeople
-Add-AppxPackage .\artifacts\msix\CopyPointerNotifier_1.1.0.0_x64.msix
+Add-AppxPackage .\artifacts\msix\CopyPointerNotifier_1.1.1.0_x64.msix
 ```
 
 Start menu and taskbar icons are cached aggressively. If a stale icon persists
@@ -76,7 +76,7 @@ These values must match the app's **Product identity** page in Partner Center.
   -IdentityName '<Package identity name>' `
   -Publisher '<Publisher ID>' `
   -PublisherDisplayName '<Publisher display name>' `
-  -Version '1.1.0.0'
+  -Version '1.1.1.0'
 ```
 
 ## Build ARM64
@@ -96,7 +96,7 @@ Then package it:
   -IdentityName '<Package identity name>' `
   -Publisher '<Publisher ID>' `
   -PublisherDisplayName '<Publisher display name>' `
-  -Version '1.1.0.0'
+  -Version '1.1.1.0'
 ```
 
 ## Bundle
@@ -104,7 +104,7 @@ Then package it:
 After both architecture packages exist:
 
 ```powershell
-.\packaging\Build-MsixBundle.ps1 -Version '1.1.0.0'
+.\packaging\Build-MsixBundle.ps1 -Version '1.1.1.0'
 ```
 
 Microsoft Store submission packages should remain unsigned; Partner Center signs

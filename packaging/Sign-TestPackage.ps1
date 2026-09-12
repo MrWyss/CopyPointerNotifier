@@ -19,7 +19,7 @@
 [CmdletBinding()]
 param(
     [string]$Package,
-    [string]$Publisher = 'CN=MrWyss',
+    [string]$Publisher = 'CN=F7578173-2D1D-45C0-A422-4858557D8E62',
     [string]$FriendlyName = 'Copy Pointer Notifier Test Certificate',
     [string]$PfxPassword = 'CopyPointerNotifier'
 )

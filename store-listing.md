@@ -1,12 +1,10 @@
 # Microsoft Store Listing — Copy Pointer Notifier
 
-## What's new in 1.1
+## What's new in 1.1.1
 
-- Create ordered clipboard-format rules for the apps and content you use.
-- Assign custom one- or two-character indicator glyphs to each rule.
-- Capture formats from the current clipboard, reorder or disable rules, and
-  preview indicators before saving.
-- Navigate the redesigned Appearance, Rules, and Advanced settings pages.
+- Improved pointer tracking performance for smoother indicator movement.
+- Sharper app icons across Windows, including transparent taskbar and Start
+  menu icons without unwanted colored plates.
 
 ## Product features
 

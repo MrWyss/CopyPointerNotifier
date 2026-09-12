@@ -5,9 +5,9 @@ param(
     [string]$Architecture,
 
     [string]$IdentityName = 'MrWyss.CopyPointerNotification',
-    [string]$Publisher = 'CN=MrWyss',
+    [string]$Publisher = 'CN=F7578173-2D1D-45C0-A422-4858557D8E62',
     [string]$PublisherDisplayName = 'MrWyss',
-    [string]$Version = '1.1.0.0',
+    [string]$Version = '1.1.1.0',
     [string]$NativeExecutable,
     [string]$OutputDirectory,
     [string]$CertificateThumbprint
