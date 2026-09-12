@@ -45,6 +45,10 @@
     <UseWinUI>true</UseWinUI>
     <EnableDefaultPageItems>false</EnableDefaultPageItems>
     <EnableDefaultApplicationDefinition>false</EnableDefaultApplicationDefinition>
+    <AppVersionMajor Condition="'$(AppVersionMajor)'==''">1</AppVersionMajor>
+    <AppVersionMinor Condition="'$(AppVersionMinor)'==''">1</AppVersionMinor>
+    <AppVersionBuild Condition="'$(AppVersionBuild)'==''">1</AppVersionBuild>
+    <AppVersionRevision Condition="'$(AppVersionRevision)'==''">0</AppVersionRevision>
   </PropertyGroup>
 
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -75,7 +79,7 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>$(GeneratedFilesDir);$(IntDir);$(SolutionDir)packages\Microsoft.Windows.ImplementationLibrary.1.0.240803.1\include;$(MSBuildProjectDirectory);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>DISABLE_XAML_GENERATED_MAIN;NOMINMAX;WIN32_LEAN_AND_MEAN;WINRT_LEAN_AND_MEAN;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>COPY_POINTER_NOTIFIER_VERSION_MAJOR=$(AppVersionMajor);COPY_POINTER_NOTIFIER_VERSION_MINOR=$(AppVersionMinor);COPY_POINTER_NOTIFIER_VERSION_BUILD=$(AppVersionBuild);COPY_POINTER_NOTIFIER_VERSION_REVISION=$(AppVersionRevision);DISABLE_XAML_GENERATED_MAIN;NOMINMAX;WIN32_LEAN_AND_MEAN;WINRT_LEAN_AND_MEAN;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <ConformanceMode>true</ConformanceMode>
       <RuntimeLibrary Condition="'$(Configuration)'=='Release'">MultiThreadedDLL</RuntimeLibrary>

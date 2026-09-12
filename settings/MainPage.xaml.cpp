@@ -24,6 +24,9 @@ namespace winrt::CopyPointerNotifier_Settings::implementation
 {
     namespace
     {
+        constexpr wchar_t GitHubUrl[] =
+            L"https://github.com/MrWyss/CopyPointerNotifier";
+
         void CopyTextToClipboard(HWND owner, std::wstring_view text)
         {
             constexpr int maxAttempts = 10;
@@ -517,6 +520,7 @@ namespace winrt::CopyPointerNotifier_Settings::implementation
         RefreshRulesList();
         UpdatePositionMarker();
         UpdateLabels();
+        UpdateVersionInformation();
         m_lastClipboardSequence = 0;
         UpdateClipboardStatus();
         m_clipboardStatusTimer.Start();
@@ -545,6 +549,39 @@ namespace winrt::CopyPointerNotifier_Settings::implementation
         AdvancedPage().Visibility(
             selected == AdvancedSelector() ? Visibility::Visible : Visibility::Collapsed);
         SettingsScrollViewer().ChangeView(nullptr, 0.0, nullptr);
+    }
+
+    void MainPage::UpdateVersionInformation()
+    {
+        std::wstring version =
+            std::to_wstring(COPY_POINTER_NOTIFIER_VERSION_MAJOR) + L"." +
+            std::to_wstring(COPY_POINTER_NOTIFIER_VERSION_MINOR) + L"." +
+            std::to_wstring(COPY_POINTER_NOTIFIER_VERSION_BUILD) + L"." +
+            std::to_wstring(COPY_POINTER_NOTIFIER_VERSION_REVISION);
+        hstring releaseChannel =
+            m_resources.GetString(L"DevelopmentBuildLabel");
+
+        if (HasPackageIdentity())
+        {
+            const auto package = Windows::ApplicationModel::Package::Current();
+            const auto packageVersion = package.Id().Version();
+            version =
+                std::to_wstring(packageVersion.Major) + L"." +
+                std::to_wstring(packageVersion.Minor) + L"." +
+                std::to_wstring(packageVersion.Build) + L"." +
+                std::to_wstring(packageVersion.Revision);
+            releaseChannel =
+                package.SignatureKind() ==
+                    Windows::ApplicationModel::PackageSignatureKind::Store
+                ? m_resources.GetString(L"StoreReleaseLabel")
+                : m_resources.GetString(L"TestReleaseLabel");
+        }
+
+        VersionLink().Content(box_value(
+            std::wstring{ m_resources.GetString(L"VersionLabel") } +
+            L" " + version));
+        VersionLink().NavigateUri(Uri{ GitHubUrl });
+        ReleaseChannelText().Text(releaseChannel);
     }
 
     // --- Position pad ---

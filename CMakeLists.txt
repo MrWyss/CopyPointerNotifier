@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(CopyPointerNotifier LANGUAGES CXX RC)
+project(CopyPointerNotifier VERSION 1.1.1.0 LANGUAGES CXX RC)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -75,6 +75,10 @@ if(MSBUILD_EXECUTABLE)
             /p:RestorePackagesConfig=true
             /p:Configuration=Release
             /p:Platform=${COPY_POINTER_NOTIFIER_SETTINGS_PLATFORM}
+            /p:AppVersionMajor=${PROJECT_VERSION_MAJOR}
+            /p:AppVersionMinor=${PROJECT_VERSION_MINOR}
+            /p:AppVersionBuild=${PROJECT_VERSION_PATCH}
+            /p:AppVersionRevision=${PROJECT_VERSION_TWEAK}
             "/p:SolutionDir=${CMAKE_CURRENT_SOURCE_DIR}/"
             "/p:OutDir=$<TARGET_FILE_DIR:CopyPointerNotifier>/settings/"
             "/p:IntDir=${CMAKE_BINARY_DIR}/settings-obj/${COPY_POINTER_NOTIFIER_SETTINGS_PLATFORM}/Release/"

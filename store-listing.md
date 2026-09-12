@@ -5,6 +5,8 @@
 - Improved pointer tracking performance for smoother indicator movement.
 - Sharper app icons across Windows, including transparent taskbar and Start
   menu icons without unwanted colored plates.
+- Added a linked version display in Settings that identifies Store, test, and
+  development builds.
 
 ## Product features
 

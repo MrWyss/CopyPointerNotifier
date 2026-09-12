@@ -112,6 +112,12 @@
   <data name="BackupInvalidAnimationSpeedError" xml:space="preserve"><value>The backup contains an invalid animation speed.</value></data>
   <data name="BackupInvalidVisibilityError" xml:space="preserve"><value>The backup contains invalid visibility settings.</value></data>
   <data name="MainApplicationMissingError" xml:space="preserve"><value>The main application could not be found for startup registration.</value></data>
+  <data name="AboutHeader.Text" xml:space="preserve"><value>About</value></data>
+  <data name="VersionLink.Content" xml:space="preserve"><value>Version</value></data>
+  <data name="VersionLabel" xml:space="preserve"><value>Version</value></data>
+  <data name="StoreReleaseLabel" xml:space="preserve"><value>Microsoft Store release</value></data>
+  <data name="TestReleaseLabel" xml:space="preserve"><value>Self-signed test release</value></data>
+  <data name="DevelopmentBuildLabel" xml:space="preserve"><value>Development build</value></data>
   <data name="OkButton" xml:space="preserve"><value>OK</value></data>
   <data name="SecondsValue" xml:space="preserve"><value>{0:0} seconds</value></data>
 </root>

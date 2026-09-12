@@ -86,6 +86,7 @@ namespace winrt::CopyPointerNotifier_Settings::implementation
         void UpdateLabels();
         void UpdateVisibilityControls();
         void UpdateClipboardStatus();
+        void UpdateVersionInformation();
         void ClipboardStatusTimer_Tick(
             Windows::Foundation::IInspectable const&,
             Windows::Foundation::IInspectable const&);

@@ -108,6 +108,7 @@ New-Item -ItemType Directory -Path $settingsOutput -Force | Out-Null
 $runtime = "win-$Architecture"
 $settingsProject = Join-Path $repoRoot 'settings\CopyPointerNotifier.Settings.vcxproj'
 $settingsPlatform = if ($Architecture -eq 'x64') { 'x64' } else { 'ARM64' }
+$parsedVersion = [version]$Version
 
 $msbuild = Get-ChildItem 'C:\BuildTools2026\MSBuild\Current\Bin\MSBuild.exe' -ErrorAction SilentlyContinue |
     Select-Object -First 1 -ExpandProperty FullName
@@ -129,6 +130,10 @@ if (-not $msbuild) {
     /p:RestorePackagesConfig=true `
     /p:Configuration=Release `
     /p:Platform=$settingsPlatform `
+    /p:AppVersionMajor=$($parsedVersion.Major) `
+    /p:AppVersionMinor=$($parsedVersion.Minor) `
+    /p:AppVersionBuild=$($parsedVersion.Build) `
+    /p:AppVersionRevision=$($parsedVersion.Revision) `
     "/p:SolutionDir=$repoRoot\" `
     /p:OutDir="$settingsOutput\" `
     /p:IntDir="$architectureRoot\obj\" `
