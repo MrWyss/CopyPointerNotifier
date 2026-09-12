@@ -21,7 +21,7 @@ The indicator follows the active cursor, respects accessibility pointer sizing a
 
 [Download Copy Pointer Notifier from the Microsoft Store](https://apps.microsoft.com/detail/9P1Q0CGM9L1G).
 
-Official prebuilt releases are currently available exclusively through the Microsoft Store. This repository contains the source code and build instructions, but does not distribute standalone binaries or GitHub Releases at this time.
+Official installation packages and updates are available exclusively through the Microsoft Store. GitHub Releases provide release notes and source archives, but do not include standalone binaries.
 
 ## Screenshots
 

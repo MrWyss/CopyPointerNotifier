@@ -119,3 +119,16 @@ accepted packages. Use `-CertificateThumbprint` only when a signed package is
 needed for local installation testing with a trusted development certificate.
 Store submissions must use the exact Partner Center identity and monotonically
 increasing four-part versions.
+
+## GitHub release
+
+After the Store submission is ready:
+
+1. Update `CHANGELOG.md` with the new version.
+2. Push the release commit and version tag.
+3. Create a GitHub Release from that tag using the matching changelog section.
+4. State that installation packages are not attached and that the application
+   is distributed and updated exclusively through the Microsoft Store.
+
+Do not attach files from `artifacts\msix-signed` or
+`artifacts\store-submission-*` to the GitHub Release.
